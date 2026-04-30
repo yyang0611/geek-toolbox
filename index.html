@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>极客工具箱 · Geek Toolbox</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="logo">⚡ 极客工具箱</div>
+    <p class="subtitle">在线开发工具 · 浏览器本地运行，你的数据不上传</p>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tool="json">JSON 格式化</button>
+    <button class="tab" data-tool="diff">文本对比</button>
+    <button class="tab" data-tool="base64">Base64</button>
+    <button class="tab" data-tool="count">字数统计</button>
+    <button class="tab" data-tool="url">URL 编解码</button>
+    <button class="tab" data-tool="timestamp">时间戳</button>
+  </nav>
+
+  <main class="container">
+
+    <!-- JSON 格式化 -->
+    <section id="tool-json" class="tool-panel active">
+      <h2>JSON 格式化 / 校验</h2>
+      <textarea id="json-input" class="code-input" placeholder="粘贴 JSON 到这里..." spellcheck="false"></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="formatJSON()">格式化</button>
+        <button class="btn" onclick="compressJSON()">压缩</button>
+        <button class="btn red" onclick="clearInput('json-input')">清空</button>
+        <button class="btn outline" onclick="copyOutput('json-output')">复制结果</button>
+      </div>
+      <div id="json-error" class="error-msg"></div>
+      <pre id="json-output" class="code-output"></pre>
+    </section>
+
+    <!-- 文本对比 -->
+    <section id="tool-diff" class="tool-panel">
+      <h2>文本对比</h2>
+      <div class="diff-grid">
+        <div>
+          <label class="label">原文</label>
+          <textarea id="diff-left" class="code-input" placeholder="原始文本..." spellcheck="false"></textarea>
+        </div>
+        <div>
+          <label class="label">修改后</label>
+          <textarea id="diff-right" class="code-input" placeholder="修改后的文本..." spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="runDiff()">对比</button>
+        <button class="btn outline" onclick="copyOutput('diff-output')">复制结果</button>
+      </div>
+      <div id="diff-output" class="diff-output"></div>
+    </section>
+
+    <!-- Base64 -->
+    <section id="tool-base64" class="tool-panel">
+      <h2>Base64 编解码</h2>
+      <textarea id="base64-input" class="code-input" placeholder="输入要编解码的文本..." spellcheck="false"></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="base64Encode()">编码 →</button>
+        <button class="btn" onclick="base64Decode()">← 解码</button>
+        <button class="btn red" onclick="clearInput('base64-input')">清空</button>
+        <button class="btn outline" onclick="copyOutput('base64-output')">复制结果</button>
+      </div>
+      <pre id="base64-output" class="code-output"></pre>
+    </section>
+
+    <!-- 字数统计 -->
+    <section id="tool-count" class="tool-panel">
+      <h2>字数统计与分析</h2>
+      <textarea id="count-input" class="code-input" placeholder="输入文本，实时统计..." oninput="liveCount()" spellcheck="false"></textarea>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><span class="stat-num" id="stat-chars">0</span><span class="stat-label">总字符</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-chinese">0</span><span class="stat-label">中文字</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-english">0</span><span class="stat-label">英文单词</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-lines">0</span><span class="stat-label">行数</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-spaces">0</span><span class="stat-label">空格</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-punct">0</span><span class="stat-label">标点</span></div>
+      </div>
+      <button class="btn outline" onclick="copyOutput('count-input')">复制文本</button>
+    </section>
+
+    <!-- URL 编解码 -->
+    <section id="tool-url" class="tool-panel">
+      <h2>URL 编解码</h2>
+      <textarea id="url-input" class="code-input" placeholder="输入 URL 或字符串..." spellcheck="false"></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="urlEncode()">编码 →</button>
+        <button class="btn" onclick="urlDecode()">← 解码</button>
+        <button class="btn red" onclick="clearInput('url-input')">清空</button>
+        <button class="btn outline" onclick="copyOutput('url-output')">复制结果</button>
+      </div>
+      <pre id="url-output" class="code-output"></pre>
+    </section>
+
+    <!-- 时间戳 -->
+    <section id="tool-timestamp" class="tool-panel">
+      <h2>时间戳转换</h2>
+      <div class="ts-row">
+        <div class="ts-card">
+          <label class="label">当前时间</label>
+          <div class="ts-value" id="ts-now-display">--</div>
+          <button class="btn small" onclick="refreshNow()">🔄 刷新</button>
+        </div>
+      </div>
+      <div class="ts-row">
+        <div class="ts-card">
+          <label class="label">时间 → 时间戳</label>
+          <input type="datetime-local" id="ts-datetime" class="ts-input" />
+          <button class="btn primary small" onclick="dateToTs()">转换</button>
+          <div class="ts-value" id="ts-to-ts">--</div>
+        </div>
+        <div class="ts-card">
+          <label class="label">时间戳 → 时间</label>
+          <input type="text" id="ts-timestamp" class="ts-input" placeholder="输入时间戳（秒）" />
+          <button class="btn primary small" onclick="tsToDate()">转换</button>
+          <div class="ts-value" id="ts-to-date">--</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>📌 所有处理在浏览器本地完成 · 数据不会上传到服务器 · 纯前端工具</p>
+    <p>如果你觉得有用，<a href="#" onclick="showSupport()">请我喝杯咖啡 ☕</a></p>
+    <div id="support-modal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-btn" onclick="hideSupport()">&times;</span>
+        <h3>❤️ 感谢支持！</h3>
+        <p>微信/支付宝扫码打赏</p>
+        <div class="qrcode-placeholder">[你的收款码图片可以放这里]</div>
+        <p class="hint">也可以联系作者：<strong>yyang0611</strong></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
