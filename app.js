@@ -1,3 +1,15 @@
+/* === Site Config: Support / Donation === */
+const supportConfig = {
+  // 国内/通用联系方式
+  contact: 'yyang0611',
+  // 只填用户名，不要填完整 URL，例如 your-paypalme-name
+  paypalUsername: '',
+  // 只填用户名，不要填完整 URL，例如 your-bmac-name
+  buyMeACoffeeUsername: '',
+  // 只填用户名，不要填完整 URL，例如 your-kofi-name
+  koFiUsername: ''
+};
+
 /* === Tab 切换 === */
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -103,6 +115,769 @@ function liveCount() {
 }
 
 /* === 时间戳 === */
+
+/* === 图片压缩 / 裁剪 === */
+
+const imageToolState = {
+  items: [],
+  activeIndex: -1,
+  image: null,
+  fileName: '',
+  originalType: '',
+  originalSize: 0,
+  naturalWidth: 0,
+  naturalHeight: 0,
+  renderedWidth: 0,
+  renderedHeight: 0,
+  offsetX: 0,
+  offsetY: 0,
+  crop: null,
+  sharedCrop: null,
+  activePointerId: null,
+  dragMode: null,
+  dragStartX: 0,
+  dragStartY: 0,
+  draftCrop: null,
+  resultBlob: null,
+  resultDataUrl: '',
+  resultWidth: 0,
+  resultHeight: 0
+};
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  return `${size >= 100 ? size.toFixed(0) : size.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getImageDimensionLimit() {
+  return 9999;
+}
+
+function normalizeDimensionValue(value, fallback) {
+  const limit = getImageDimensionLimit();
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return fallback;
+  return clamp(Math.round(numeric), 1, limit);
+}
+
+function getImageCanvas() {
+  return document.getElementById('img-editor-canvas');
+}
+
+function getActiveImageItem() {
+  if (imageToolState.activeIndex < 0 || imageToolState.activeIndex >= imageToolState.items.length) return null;
+  return imageToolState.items[imageToolState.activeIndex];
+}
+
+function buildFullImageCrop(item) {
+  return {
+    x: 0,
+    y: 0,
+    width: item.naturalWidth,
+    height: item.naturalHeight
+  };
+}
+
+function adaptCropToItem(crop, item) {
+  if (!crop || !item) return buildFullImageCrop(item);
+  const widthRatio = item.naturalWidth / Math.max(1, imageToolState.naturalWidth || item.naturalWidth);
+  const heightRatio = item.naturalHeight / Math.max(1, imageToolState.naturalHeight || item.naturalHeight);
+  return normalizeCropForItem({
+    x: crop.x * widthRatio,
+    y: crop.y * heightRatio,
+    width: crop.width * widthRatio,
+    height: crop.height * heightRatio
+  }, item);
+}
+
+function ensureImageCrop() {
+  const item = getActiveImageItem();
+  if (!item) {
+    imageToolState.crop = null;
+    return;
+  }
+
+  if (item.useCustomCrop) {
+    if (!item.customCrop) {
+      item.customCrop = buildFullImageCrop(item);
+    }
+    imageToolState.crop = { ...item.customCrop };
+    return;
+  }
+
+  if (!imageToolState.sharedCrop) {
+    imageToolState.sharedCrop = buildFullImageCrop(item);
+  }
+  imageToolState.crop = adaptCropToItem(imageToolState.sharedCrop, item);
+}
+
+function syncActiveImageFromItem() {
+  const item = getActiveImageItem();
+  if (!item) {
+    imageToolState.image = null;
+    imageToolState.fileName = '';
+    imageToolState.originalType = '';
+    imageToolState.originalSize = 0;
+    imageToolState.naturalWidth = 0;
+    imageToolState.naturalHeight = 0;
+    imageToolState.crop = null;
+    return;
+  }
+
+  imageToolState.image = item.image;
+  imageToolState.fileName = item.fileName;
+  imageToolState.originalType = item.originalType;
+  imageToolState.originalSize = item.originalSize;
+  imageToolState.naturalWidth = item.naturalWidth;
+  imageToolState.naturalHeight = item.naturalHeight;
+  ensureImageCrop();
+}
+
+function syncImageMeta() {
+  const sourceMeta = document.getElementById('img-source-meta');
+  const cropMeta = document.getElementById('img-crop-meta');
+  const batchMeta = document.getElementById('img-batch-meta');
+  const toggle = document.getElementById('img-custom-crop-toggle');
+  const activeItem = getActiveImageItem();
+
+  if (sourceMeta) {
+    sourceMeta.textContent = activeItem
+      ? `当前：${activeItem.fileName} · ${activeItem.naturalWidth} × ${activeItem.naturalHeight} · ${formatBytes(activeItem.originalSize)}`
+      : '请选择图片后开始编辑';
+  }
+
+  if (batchMeta) {
+    batchMeta.textContent = imageToolState.items.length
+      ? `已加载 ${imageToolState.items.length} 张图片 · 默认共用裁剪规则，可切换到单张图片单独处理`
+      : '支持点击、拖拽、批量上传图片';
+  }
+
+  if (cropMeta) {
+    cropMeta.textContent = imageToolState.crop
+      ? `裁剪区：${Math.round(imageToolState.crop.width)} × ${Math.round(imageToolState.crop.height)} · 起点 ${Math.round(imageToolState.crop.x)}, ${Math.round(imageToolState.crop.y)}`
+      : '裁剪区：--';
+  }
+
+  if (toggle) {
+    toggle.checked = Boolean(activeItem && activeItem.useCustomCrop);
+    toggle.disabled = !activeItem;
+  }
+}
+
+function renderImageQueue() {
+  const queue = document.getElementById('img-queue');
+  if (!queue) return;
+
+  if (!imageToolState.items.length) {
+    queue.innerHTML = '<div class="img-queue-empty">暂无图片。上传后可逐张切换，并为单张图片单独调整裁剪。</div>';
+    return;
+  }
+
+  queue.innerHTML = imageToolState.items.map((item, index) => `
+    <button type="button" class="img-queue-item ${index === imageToolState.activeIndex ? 'active' : ''}" onclick="setActiveImageIndex(${index})">
+      <img class="img-queue-thumb" src="${item.previewUrl}" alt="${escapeHtml(item.fileName)}" />
+      <span class="img-queue-text">
+        <span class="img-queue-name">${escapeHtml(item.fileName)}</span>
+        <span class="img-queue-sub">${item.naturalWidth} × ${item.naturalHeight} · ${formatBytes(item.originalSize)}</span>
+      </span>
+      <span class="img-queue-badge">${item.useCustomCrop ? '单独' : '共用'}</span>
+    </button>
+  `).join('');
+}
+
+function setActiveImageIndex(index) {
+  if (index < 0 || index >= imageToolState.items.length) return;
+  imageToolState.activeIndex = index;
+  syncActiveImageFromItem();
+  const widthInput = document.getElementById('img-max-width');
+  const heightInput = document.getElementById('img-max-height');
+  if (widthInput) widthInput.value = String(Math.round(imageToolState.crop ? imageToolState.crop.width : imageToolState.naturalWidth));
+  if (heightInput) heightInput.value = String(Math.round(imageToolState.crop ? imageToolState.crop.height : imageToolState.naturalHeight));
+  clearImageResult();
+  renderImageQueue();
+  syncImageMeta();
+  updateImageCompressionSummary();
+  drawImageEditor();
+}
+
+function normalizeCropForItem(crop, item = getActiveImageItem()) {
+  if (!item) return crop;
+  const normalized = {
+    x: crop.width >= 0 ? crop.x : crop.x + crop.width,
+    y: crop.height >= 0 ? crop.y : crop.y + crop.height,
+    width: Math.abs(crop.width),
+    height: Math.abs(crop.height)
+  };
+
+  normalized.width = Math.max(40, normalized.width);
+  normalized.height = Math.max(40, normalized.height);
+  normalized.x = clamp(normalized.x, 0, item.naturalWidth - normalized.width);
+  normalized.y = clamp(normalized.y, 0, item.naturalHeight - normalized.height);
+  normalized.width = Math.min(normalized.width, item.naturalWidth - normalized.x);
+  normalized.height = Math.min(normalized.height, item.naturalHeight - normalized.y);
+  return normalized;
+}
+
+function applyCropChange(nextCrop) {
+  const item = getActiveImageItem();
+  if (!item) return;
+  const normalized = normalizeCropForItem(nextCrop, item);
+  imageToolState.crop = normalized;
+
+  if (item.useCustomCrop) {
+    item.customCrop = { ...normalized };
+    return;
+  }
+
+  imageToolState.sharedCrop = {
+    x: normalized.x,
+    y: normalized.y,
+    width: normalized.width,
+    height: normalized.height
+  };
+
+  imageToolState.items.forEach(queueItem => {
+    if (!queueItem.useCustomCrop) {
+      queueItem.customCrop = null;
+    }
+  });
+}
+
+function toggleActiveImageCustomCrop(checked) {
+  const item = getActiveImageItem();
+  if (!item) return;
+  item.useCustomCrop = checked;
+  if (checked) {
+    item.customCrop = imageToolState.crop ? { ...imageToolState.crop } : buildFullImageCrop(item);
+  } else {
+    item.customCrop = null;
+  }
+  ensureImageCrop();
+  renderImageQueue();
+  syncImageMeta();
+  updateImageCompressionSummary();
+  drawImageEditor();
+}
+
+function onImageDimensionInputChange() {
+  const widthInput = document.getElementById('img-max-width');
+  const heightInput = document.getElementById('img-max-height');
+  if (widthInput && widthInput.value) {
+    widthInput.value = String(normalizeDimensionValue(widthInput.value, 1));
+  }
+  if (heightInput && heightInput.value) {
+    heightInput.value = String(normalizeDimensionValue(heightInput.value, 1));
+  }
+  updateImageCompressionSummary();
+}
+
+function updateImageCompressionSummary() {
+  const summary = document.getElementById('img-export-summary');
+  const widthInput = document.getElementById('img-max-width');
+  const heightInput = document.getElementById('img-max-height');
+  if (!summary) return;
+  if (!imageToolState.image || !imageToolState.crop) {
+    summary.textContent = '裁剪后可压缩导出，并在下方预览结果。';
+    return;
+  }
+  const format = document.getElementById('img-format').value.toUpperCase();
+  const cropWidth = Math.round(imageToolState.crop.width);
+  const cropHeight = Math.round(imageToolState.crop.height);
+
+  const exportWidth = normalizeDimensionValue(widthInput && widthInput.value ? widthInput.value : cropWidth, cropWidth);
+  const exportHeight = normalizeDimensionValue(heightInput && heightInput.value ? heightInput.value : cropHeight, cropHeight);
+
+  summary.textContent = `导出：${format} · ${exportWidth} × ${exportHeight} · ${imageToolState.items.length > 1 ? '支持批量导出' : '单张导出'}`;
+}
+
+function onImageQualityChange() {
+  const quality = Number(document.getElementById('img-quality').value || 0.82);
+  const qualityValue = document.getElementById('img-quality-value');
+  if (qualityValue) {
+    qualityValue.textContent = `${Math.round(quality * 100)}%`;
+  }
+  updateImageCompressionSummary();
+}
+
+function clearImageResult() {
+  imageToolState.resultBlob = null;
+  imageToolState.resultDataUrl = '';
+  imageToolState.resultWidth = 0;
+  imageToolState.resultHeight = 0;
+
+  const preview = document.getElementById('img-result-preview');
+  const empty = document.getElementById('img-result-empty');
+  const meta = document.getElementById('img-result-meta');
+  if (preview) {
+    preview.src = '';
+    preview.classList.add('hidden');
+  }
+  if (empty) {
+    empty.classList.remove('hidden');
+  }
+  if (meta) {
+    meta.textContent = '结果：--';
+  }
+}
+
+function clearImageTool() {
+  imageToolState.items = [];
+  imageToolState.activeIndex = -1;
+  imageToolState.image = null;
+  imageToolState.fileName = '';
+  imageToolState.originalType = '';
+  imageToolState.originalSize = 0;
+  imageToolState.naturalWidth = 0;
+  imageToolState.naturalHeight = 0;
+  imageToolState.renderedWidth = 0;
+  imageToolState.renderedHeight = 0;
+  imageToolState.offsetX = 0;
+  imageToolState.offsetY = 0;
+  imageToolState.crop = null;
+  imageToolState.sharedCrop = null;
+  imageToolState.activePointerId = null;
+  imageToolState.dragMode = null;
+  imageToolState.draftCrop = null;
+
+  const input = document.getElementById('img-input');
+  const widthInput = document.getElementById('img-max-width');
+  const heightInput = document.getElementById('img-max-height');
+  const emptyState = document.getElementById('img-empty-state');
+  const canvas = getImageCanvas();
+  const toggle = document.getElementById('img-custom-crop-toggle');
+  if (input) input.value = '';
+  if (widthInput) widthInput.value = '';
+  if (heightInput) heightInput.value = '';
+  if (toggle) {
+    toggle.checked = false;
+    toggle.disabled = true;
+  }
+  if (emptyState) emptyState.classList.remove('hidden');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.classList.remove('dragging', 'resizing');
+  }
+
+  renderImageQueue();
+  clearImageResult();
+  syncImageMeta();
+  updateImageCompressionSummary();
+}
+
+function resetImageCrop() {
+  const item = getActiveImageItem();
+  if (!item) return;
+  if (item.useCustomCrop) {
+    item.customCrop = buildFullImageCrop(item);
+  } else {
+    imageToolState.sharedCrop = buildFullImageCrop(item);
+  }
+  ensureImageCrop();
+  const widthInput = document.getElementById('img-max-width');
+  const heightInput = document.getElementById('img-max-height');
+  if (widthInput) widthInput.value = String(Math.round(imageToolState.crop.width));
+  if (heightInput) heightInput.value = String(Math.round(imageToolState.crop.height));
+  drawImageEditor();
+  syncImageMeta();
+  updateImageCompressionSummary();
+  clearImageResult();
+  renderImageQueue();
+}
+
+function getRenderedCropRect() {
+  if (!imageToolState.crop) return null;
+  const scaleX = imageToolState.renderedWidth / imageToolState.naturalWidth;
+  const scaleY = imageToolState.renderedHeight / imageToolState.naturalHeight;
+  return {
+    x: imageToolState.offsetX + imageToolState.crop.x * scaleX,
+    y: imageToolState.offsetY + imageToolState.crop.y * scaleY,
+    width: imageToolState.crop.width * scaleX,
+    height: imageToolState.crop.height * scaleY
+  };
+}
+
+function drawImageEditor() {
+  const canvas = getImageCanvas();
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const emptyState = document.getElementById('img-empty-state');
+  const wrap = document.getElementById('img-canvas-wrap');
+  if (!ctx || !wrap) return;
+
+  const wrapWidth = Math.max(320, Math.floor(wrap.clientWidth - 24));
+  const wrapHeight = Math.max(260, Math.floor((window.innerHeight || 900) * 0.52));
+  canvas.width = wrapWidth;
+  canvas.height = wrapHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!imageToolState.image) {
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add('hidden');
+
+  const scale = Math.min(canvas.width / imageToolState.naturalWidth, canvas.height / imageToolState.naturalHeight);
+  const renderedWidth = Math.max(1, Math.round(imageToolState.naturalWidth * scale));
+  const renderedHeight = Math.max(1, Math.round(imageToolState.naturalHeight * scale));
+  const offsetX = Math.round((canvas.width - renderedWidth) / 2);
+  const offsetY = Math.round((canvas.height - renderedHeight) / 2);
+
+  imageToolState.renderedWidth = renderedWidth;
+  imageToolState.renderedHeight = renderedHeight;
+  imageToolState.offsetX = offsetX;
+  imageToolState.offsetY = offsetY;
+
+  ctx.drawImage(imageToolState.image, offsetX, offsetY, renderedWidth, renderedHeight);
+
+  ensureImageCrop();
+  const crop = getRenderedCropRect();
+  if (!crop) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,10,24,0.58)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(crop.x, crop.y, crop.width, crop.height);
+  ctx.drawImage(imageToolState.image, offsetX, offsetY, renderedWidth, renderedHeight);
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = '#00d4aa';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.strokeRect(crop.x, crop.y, crop.width, crop.height);
+
+  ctx.fillStyle = 'rgba(0, 212, 170, 0.18)';
+  ctx.fillRect(crop.x, crop.y, crop.width, crop.height);
+
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.beginPath();
+  ctx.moveTo(crop.x + crop.width / 3, crop.y);
+  ctx.lineTo(crop.x + crop.width / 3, crop.y + crop.height);
+  ctx.moveTo(crop.x + (crop.width * 2) / 3, crop.y);
+  ctx.lineTo(crop.x + (crop.width * 2) / 3, crop.y + crop.height);
+  ctx.moveTo(crop.x, crop.y + crop.height / 3);
+  ctx.lineTo(crop.x + crop.width, crop.y + crop.height / 3);
+  ctx.moveTo(crop.x, crop.y + (crop.height * 2) / 3);
+  ctx.lineTo(crop.x + crop.width, crop.y + (crop.height * 2) / 3);
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(crop.x + crop.width, crop.y + crop.height, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#6c63ff';
+  ctx.stroke();
+  ctx.restore();
+}
+
+function canvasPointToImagePoint(clientX, clientY) {
+  const canvas = getImageCanvas();
+  const rect = canvas.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+
+  const relativeX = clamp((x - imageToolState.offsetX) / imageToolState.renderedWidth, 0, 1);
+  const relativeY = clamp((y - imageToolState.offsetY) / imageToolState.renderedHeight, 0, 1);
+
+  return {
+    canvasX: x,
+    canvasY: y,
+    imageX: relativeX * imageToolState.naturalWidth,
+    imageY: relativeY * imageToolState.naturalHeight
+  };
+}
+
+function hitTestImageCrop(clientX, clientY) {
+  const crop = getRenderedCropRect();
+  if (!crop) return 'outside';
+  const point = canvasPointToImagePoint(clientX, clientY);
+  const resizeHandleSize = 16;
+  const onResizeHandle =
+    point.canvasX >= crop.x + crop.width - resizeHandleSize &&
+    point.canvasX <= crop.x + crop.width + resizeHandleSize &&
+    point.canvasY >= crop.y + crop.height - resizeHandleSize &&
+    point.canvasY <= crop.y + crop.height + resizeHandleSize;
+
+  if (onResizeHandle) return 'resize';
+  const inside =
+    point.canvasX >= crop.x &&
+    point.canvasX <= crop.x + crop.width &&
+    point.canvasY >= crop.y &&
+    point.canvasY <= crop.y + crop.height;
+
+  return inside ? 'move' : 'new';
+}
+
+function normalizeCrop(crop) {
+  return normalizeCropForItem(crop, getActiveImageItem());
+}
+
+function onImageCanvasPointerDown(event) {
+  if (!imageToolState.image) return;
+  const canvas = getImageCanvas();
+  if (!canvas) return;
+
+  const mode = hitTestImageCrop(event.clientX, event.clientY);
+  const point = canvasPointToImagePoint(event.clientX, event.clientY);
+  imageToolState.activePointerId = event.pointerId;
+  imageToolState.dragStartX = point.imageX;
+  imageToolState.dragStartY = point.imageY;
+  imageToolState.draftCrop = imageToolState.crop ? { ...imageToolState.crop } : null;
+  imageToolState.dragMode = mode;
+
+  canvas.setPointerCapture(event.pointerId);
+  canvas.classList.toggle('resizing', mode === 'resize');
+  canvas.classList.toggle('dragging', mode === 'move');
+
+  if (mode === 'new') {
+    applyCropChange({
+      x: point.imageX,
+      y: point.imageY,
+      width: 1,
+      height: 1
+    });
+    drawImageEditor();
+  }
+}
+
+function onImageCanvasPointerMove(event) {
+  const canvas = getImageCanvas();
+  if (!canvas || imageToolState.activePointerId !== event.pointerId || !imageToolState.dragMode) return;
+  const point = canvasPointToImagePoint(event.clientX, event.clientY);
+
+  if (imageToolState.dragMode === 'move' && imageToolState.draftCrop) {
+    const item = getActiveImageItem();
+    if (!item) return;
+    const deltaX = point.imageX - imageToolState.dragStartX;
+    const deltaY = point.imageY - imageToolState.dragStartY;
+    applyCropChange({
+      ...imageToolState.draftCrop,
+      x: clamp(imageToolState.draftCrop.x + deltaX, 0, item.naturalWidth - imageToolState.draftCrop.width),
+      y: clamp(imageToolState.draftCrop.y + deltaY, 0, item.naturalHeight - imageToolState.draftCrop.height)
+    });
+  } else if (imageToolState.dragMode === 'resize' && imageToolState.draftCrop) {
+    applyCropChange({
+      x: imageToolState.draftCrop.x,
+      y: imageToolState.draftCrop.y,
+      width: point.imageX - imageToolState.draftCrop.x,
+      height: point.imageY - imageToolState.draftCrop.y
+    });
+  } else if (imageToolState.dragMode === 'new' && imageToolState.crop) {
+    applyCropChange({
+      x: imageToolState.dragStartX,
+      y: imageToolState.dragStartY,
+      width: point.imageX - imageToolState.dragStartX,
+      height: point.imageY - imageToolState.dragStartY
+    });
+  }
+
+  renderImageQueue();
+  drawImageEditor();
+  syncImageMeta();
+  updateImageCompressionSummary();
+}
+
+function onImageCanvasPointerUp(event) {
+  const canvas = getImageCanvas();
+  if (!canvas || imageToolState.activePointerId !== event.pointerId) return;
+  canvas.releasePointerCapture(event.pointerId);
+  canvas.classList.remove('dragging', 'resizing');
+  imageToolState.activePointerId = null;
+  imageToolState.dragMode = null;
+  imageToolState.draftCrop = null;
+  syncImageMeta();
+  updateImageCompressionSummary();
+}
+
+function getExportSettings(crop = imageToolState.crop) {
+  const widthInput = document.getElementById('img-max-width');
+  const heightInput = document.getElementById('img-max-height');
+  return {
+    exportWidth: normalizeDimensionValue(widthInput && widthInput.value ? widthInput.value : Math.round(crop.width), Math.round(crop.width)),
+    exportHeight: normalizeDimensionValue(heightInput && heightInput.value ? heightInput.value : Math.round(crop.height), Math.round(crop.height))
+  };
+}
+
+function createCompressedBlobForItem(item) {
+  return new Promise(resolve => {
+    const crop = item.useCustomCrop && item.customCrop ? item.customCrop : adaptCropToItem(imageToolState.sharedCrop || buildFullImageCrop(item), item);
+    const { exportWidth, exportHeight } = getExportSettings(crop);
+    const format = document.getElementById('img-format').value;
+    const quality = Number(document.getElementById('img-quality').value || 0.82);
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = exportWidth;
+    outputCanvas.height = exportHeight;
+    const ctx = outputCanvas.getContext('2d');
+
+    if (format === 'jpeg') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, exportWidth, exportHeight);
+    }
+
+    ctx.drawImage(item.image, crop.x, crop.y, crop.width, crop.height, 0, 0, exportWidth, exportHeight);
+    const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+    outputCanvas.toBlob(blob => resolve({ blob, exportWidth, exportHeight, format, crop }), mimeType, format === 'png' ? undefined : quality);
+  });
+}
+
+function generateCompressedImage() {
+  const item = getActiveImageItem();
+  if (!item || !imageToolState.crop) return;
+
+  createCompressedBlobForItem(item).then(({ blob, exportWidth, exportHeight, format }) => {
+    if (!blob) return;
+    imageToolState.resultBlob = blob;
+    imageToolState.resultWidth = exportWidth;
+    imageToolState.resultHeight = exportHeight;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const preview = document.getElementById('img-result-preview');
+      const empty = document.getElementById('img-result-empty');
+      const meta = document.getElementById('img-result-meta');
+
+      imageToolState.resultDataUrl = String(reader.result || '');
+      if (preview) {
+        preview.src = imageToolState.resultDataUrl;
+        preview.classList.remove('hidden');
+      }
+      if (empty) {
+        empty.classList.add('hidden');
+      }
+      if (meta) {
+        meta.textContent = `结果：${exportWidth} × ${exportHeight} · ${formatBytes(blob.size)} · ${format.toUpperCase()} · 当前图片`;
+      }
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+function downloadCompressedImage() {
+  const item = getActiveImageItem();
+  if (!item || !imageToolState.resultBlob) return;
+  const ext = document.getElementById('img-format').value === 'png' ? 'png' : 'jpg';
+  const baseName = item.fileName ? item.fileName.replace(/\.[^.]+$/, '') : 'compressed-image';
+  const url = URL.createObjectURL(imageToolState.resultBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${baseName}-cropped.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadAllCompressedImages() {
+  if (!imageToolState.items.length) return;
+  imageToolState.items.forEach((item, index) => {
+    createCompressedBlobForItem(item).then(({ blob, format }) => {
+      if (!blob) return;
+      const ext = format === 'png' ? 'png' : 'jpg';
+      const baseName = item.fileName ? item.fileName.replace(/\.[^.]+$/, '') : `compressed-image-${index + 1}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${baseName}-cropped.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  });
+}
+
+function loadFilesIntoImageTool(files) {
+  const imageFiles = Array.from(files || []).filter(file => file.type.startsWith('image/'));
+  if (!imageFiles.length) return;
+
+  const loaders = imageFiles.map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        resolve({
+          image,
+          fileName: file.name,
+          originalType: file.type,
+          originalSize: file.size,
+          naturalWidth: image.naturalWidth || image.width,
+          naturalHeight: image.naturalHeight || image.height,
+          previewUrl: String(reader.result || ''),
+          useCustomCrop: false,
+          customCrop: null
+        });
+      };
+      image.src = String(reader.result || '');
+    };
+    reader.readAsDataURL(file);
+  }));
+
+  Promise.all(loaders).then(items => {
+    const hadItems = imageToolState.items.length > 0;
+    imageToolState.items = imageToolState.items.concat(items);
+    if (!hadItems) {
+      imageToolState.sharedCrop = null;
+      imageToolState.activeIndex = 0;
+    }
+    if (imageToolState.activeIndex < 0) {
+      imageToolState.activeIndex = 0;
+    }
+    syncActiveImageFromItem();
+    const widthInput = document.getElementById('img-max-width');
+    const heightInput = document.getElementById('img-max-height');
+    if (widthInput && !widthInput.value) widthInput.value = String(Math.round(imageToolState.crop.width));
+    if (heightInput && !heightInput.value) heightInput.value = String(Math.round(imageToolState.crop.height));
+    clearImageResult();
+    renderImageQueue();
+    syncImageMeta();
+    updateImageCompressionSummary();
+    drawImageEditor();
+  });
+}
+
+function onImageInputChange(event) {
+  const files = event.target.files;
+  if (!files || !files.length) {
+    return;
+  }
+  loadFilesIntoImageTool(files);
+}
+
+function onImageDrop(event) {
+  event.preventDefault();
+  const wrap = document.getElementById('img-canvas-wrap');
+  if (wrap) wrap.classList.remove('drag-over');
+  if (event.dataTransfer && event.dataTransfer.files) {
+    loadFilesIntoImageTool(event.dataTransfer.files);
+  }
+}
+
+function onImageDragOver(event) {
+  event.preventDefault();
+  const wrap = document.getElementById('img-canvas-wrap');
+  if (wrap) wrap.classList.add('drag-over');
+}
+
+function onImageDragLeave() {
+  const wrap = document.getElementById('img-canvas-wrap');
+  if (wrap) wrap.classList.remove('drag-over');
+}
+
 const timestampPickerState = {
   current: null,
   viewingYear: 0,
@@ -750,11 +1525,111 @@ function escapeHtml(str) {
 }
 
 /* === 打赏弹窗 === */
+function getPayPalSupportUrl() {
+  return supportConfig.paypalUsername
+    ? `https://www.paypal.com/paypalme/${supportConfig.paypalUsername}`
+    : 'https://www.paypal.com/paypalme/';
+}
+
+function getBuyMeACoffeeUrl() {
+  return supportConfig.buyMeACoffeeUsername
+    ? `https://buymeacoffee.com/${supportConfig.buyMeACoffeeUsername}`
+    : 'https://buymeacoffee.com/';
+}
+
+function getKoFiUrl() {
+  return supportConfig.koFiUsername
+    ? `https://ko-fi.com/${supportConfig.koFiUsername}`
+    : 'https://ko-fi.com/';
+}
+
+function applySupportLinks() {
+  const contactText = document.getElementById('support-contact-text');
+  const paypalLink = document.getElementById('paypal-support-link');
+  const paypalText = document.getElementById('paypal-support-text');
+  const bmacLink = document.getElementById('bmac-support-link');
+  const bmacText = document.getElementById('bmac-support-text');
+  const kofiLink = document.getElementById('kofi-support-link');
+  const kofiText = document.getElementById('kofi-support-text');
+
+  const hasPayPal = Boolean(supportConfig.paypalUsername);
+  const hasBmac = Boolean(supportConfig.buyMeACoffeeUsername);
+  const hasKoFi = Boolean(supportConfig.koFiUsername);
+  const paypalUrl = getPayPalSupportUrl();
+  const bmacUrl = getBuyMeACoffeeUrl();
+  const kofiUrl = getKoFiUrl();
+
+  if (contactText) {
+    contactText.textContent = supportConfig.contact || '未设置';
+  }
+
+  if (paypalLink) {
+    paypalLink.href = hasPayPal ? paypalUrl : '#';
+    paypalLink.textContent = hasPayPal ? 'PayPal 支持' : 'PayPal（待配置）';
+    paypalLink.classList.toggle('is-disabled', !hasPayPal);
+    paypalLink.setAttribute('aria-disabled', hasPayPal ? 'false' : 'true');
+    paypalLink.tabIndex = hasPayPal ? 0 : -1;
+  }
+  if (paypalText) {
+    paypalText.textContent = hasPayPal ? paypalUrl : '未配置 PayPal 用户名';
+  }
+
+  if (bmacLink) {
+    bmacLink.href = hasBmac ? bmacUrl : '#';
+    bmacLink.textContent = hasBmac ? 'Buy Me a Coffee' : 'Buy Me a Coffee（待配置）';
+    bmacLink.classList.toggle('is-disabled', !hasBmac);
+    bmacLink.setAttribute('aria-disabled', hasBmac ? 'false' : 'true');
+    bmacLink.tabIndex = hasBmac ? 0 : -1;
+  }
+  if (bmacText) {
+    bmacText.textContent = hasBmac ? bmacUrl : '未配置 Buy Me a Coffee 用户名';
+  }
+
+  if (kofiLink) {
+    kofiLink.href = hasKoFi ? kofiUrl : '#';
+    kofiLink.textContent = hasKoFi ? 'Ko-fi' : 'Ko-fi（待配置）';
+    kofiLink.classList.toggle('is-disabled', !hasKoFi);
+    kofiLink.setAttribute('aria-disabled', hasKoFi ? 'false' : 'true');
+    kofiLink.tabIndex = hasKoFi ? 0 : -1;
+  }
+  if (kofiText) {
+    kofiText.textContent = hasKoFi ? kofiUrl : '未配置 Ko-fi 用户名';
+  }
+}
+
 function showSupport() {
   document.getElementById('support-modal').classList.remove('hidden');
+  applySupportLinks();
+  switchSupportTab('cn');
 }
 function hideSupport() {
   document.getElementById('support-modal').classList.add('hidden');
+}
+function switchSupportTab(tab) {
+  const isCn = tab === 'cn';
+  const cnTab = document.getElementById('support-tab-cn');
+  const intlTab = document.getElementById('support-tab-intl');
+  const cnPanel = document.getElementById('support-panel-cn');
+  const intlPanel = document.getElementById('support-panel-intl');
+
+  if (cnTab) cnTab.classList.toggle('active', isCn);
+  if (intlTab) intlTab.classList.toggle('active', !isCn);
+  if (cnPanel) cnPanel.classList.toggle('hidden', !isCn);
+  if (intlPanel) intlPanel.classList.toggle('hidden', isCn);
+}
+function copySupportContact() {
+  const value = supportConfig.contact || '';
+  const button = document.getElementById('support-contact-copy-btn');
+  if (!value) return;
+  writeTextToClipboard(value).then(() => {
+    if (!button) return;
+    const originalText = button.dataset.originalText || button.textContent;
+    button.dataset.originalText = originalText;
+    button.textContent = '已复制';
+    setTimeout(() => {
+      button.textContent = button.dataset.originalText || '复制联系方式';
+    }, 1200);
+  });
 }
 document.getElementById('support-modal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) hideSupport();
@@ -794,3 +1669,37 @@ document.addEventListener('keydown', (e) => {
 
 window.addEventListener('resize', updateTimestampPickerPlacement);
 window.addEventListener('scroll', updateTimestampPickerPlacement, true);
+
+
+const imageInput = document.getElementById('img-input');
+const imageCanvas = getImageCanvas();
+const imageCanvasWrap = document.getElementById('img-canvas-wrap');
+
+if (imageInput) {
+  imageInput.addEventListener('change', onImageInputChange);
+}
+
+if (imageCanvas) {
+  imageCanvas.addEventListener('pointerdown', onImageCanvasPointerDown);
+  imageCanvas.addEventListener('pointermove', onImageCanvasPointerMove);
+  imageCanvas.addEventListener('pointerup', onImageCanvasPointerUp);
+  imageCanvas.addEventListener('pointercancel', onImageCanvasPointerUp);
+}
+
+if (imageCanvasWrap) {
+  imageCanvasWrap.addEventListener('dragover', onImageDragOver);
+  imageCanvasWrap.addEventListener('dragleave', onImageDragLeave);
+  imageCanvasWrap.addEventListener('drop', onImageDrop);
+}
+
+window.addEventListener('resize', () => {
+  if (imageToolState.image) {
+    drawImageEditor();
+  }
+});
+
+onImageQualityChange();
+renderImageQueue();
+updateImageCompressionSummary();
+syncImageMeta();
+clearImageResult();

@@ -13,18 +13,19 @@
   </header>
 
   <nav class="tabs" id="tabs">
-    <button class="tab active" data-tool="json">JSON 格式化</button>
+    <button class="tab active" data-tool="timestamp">时间戳</button>
+    <button class="tab" data-tool="image">图片压缩</button>
+    <button class="tab" data-tool="json">JSON 格式化</button>
     <button class="tab" data-tool="diff">文本对比</button>
     <button class="tab" data-tool="base64">Base64</button>
     <button class="tab" data-tool="count">字数统计</button>
     <button class="tab" data-tool="url">URL 编解码</button>
-    <button class="tab" data-tool="timestamp">时间戳</button>
   </nav>
 
   <main class="container">
 
     <!-- JSON 格式化 -->
-    <section id="tool-json" class="tool-panel active">
+    <section id="tool-json" class="tool-panel">
       <h2>JSON 格式化 / 校验</h2>
       <textarea id="json-input" class="code-input" placeholder="粘贴 JSON 到这里..." spellcheck="false"></textarea>
       <div class="btn-row">
@@ -99,7 +100,7 @@
     </section>
 
     <!-- 时间戳 -->
-    <section id="tool-timestamp" class="tool-panel">
+    <section id="tool-timestamp" class="tool-panel active">
       <h2>时间戳转换</h2>
       <div class="ts-row">
         <div class="ts-card">
@@ -200,6 +201,81 @@
       </div>
     </section>
 
+    <!-- 图片压缩 -->
+    <section id="tool-image" class="tool-panel">
+      <h2>图片压缩 / 自定义裁剪</h2>
+      <div class="img-tool-grid">
+        <div class="img-card">
+          <label class="label" for="img-input">上传图片</label>
+          <input type="file" id="img-input" class="img-file-input" accept="image/*" multiple />
+          <div id="img-source-meta" class="img-meta">请选择图片后开始编辑</div>
+          <div id="img-batch-meta" class="img-hint">支持点击、拖拽、批量上传图片</div>
+          <div id="img-queue" class="img-queue">
+            <div class="img-queue-empty">暂无图片。上传后可逐张切换，并为单张图片单独调整裁剪。</div>
+          </div>
+          <div class="img-canvas-wrap" id="img-canvas-wrap">
+            <canvas id="img-editor-canvas" class="img-editor-canvas" aria-label="图片裁剪编辑区域"></canvas>
+            <div id="img-empty-state" class="img-empty-state">拖拽图片到这里，或点击上方按钮选择文件。上传后默认按同一裁剪规则处理全部图片。</div>
+          </div>
+          <div class="img-help">默认所有图片共用同一裁剪规则。你也可以切换到某张图片并勾选“当前图片单独裁剪”。</div>
+          <div class="btn-row">
+            <button class="btn outline" type="button" onclick="resetImageCrop()">重置当前裁剪</button>
+            <button class="btn red" type="button" onclick="clearImageTool()">清空全部</button>
+          </div>
+        </div>
+
+        <div class="img-card">
+          <label class="label">导出设置</label>
+          <div class="img-control-grid">
+            <label class="img-control">
+              <span>输出格式</span>
+              <select id="img-format" class="ts-select" onchange="updateImageCompressionSummary()">
+                <option value="jpeg">JPEG</option>
+                <option value="png">PNG</option>
+              </select>
+            </label>
+
+            <label class="img-control">
+              <span>压缩质量</span>
+              <input type="range" id="img-quality" class="img-range" min="0.4" max="1" step="0.05" value="0.82" oninput="onImageQualityChange()" />
+              <strong id="img-quality-value" class="img-quality-value">82%</strong>
+            </label>
+
+            <label class="img-control">
+              <span>输出宽度</span>
+              <input type="number" id="img-max-width" class="ts-input img-number-input" min="1" max="9999" placeholder="默认按裁剪区宽度" oninput="onImageDimensionInputChange()" />
+            </label>
+
+            <label class="img-control">
+              <span>输出高度</span>
+              <input type="number" id="img-max-height" class="ts-input img-number-input" min="1" max="9999" placeholder="默认按裁剪区高度" oninput="onImageDimensionInputChange()" />
+            </label>
+
+            <label class="img-toggle-option">
+              <input type="checkbox" id="img-custom-crop-toggle" onchange="toggleActiveImageCustomCrop(this.checked)" />
+              <span>当前图片单独裁剪</span>
+            </label>
+          </div>
+
+          <div id="img-crop-meta" class="img-meta">裁剪区：--</div>
+          <div id="img-export-summary" class="img-hint">裁剪后可压缩导出，并在下方预览结果。</div>
+
+          <div class="btn-row">
+            <button class="btn primary" type="button" onclick="generateCompressedImage()">生成当前预览</button>
+            <button class="btn outline" type="button" onclick="downloadCompressedImage()">下载当前</button>
+            <button class="btn" type="button" onclick="downloadAllCompressedImages()">批量导出全部</button>
+          </div>
+
+          <div class="img-result-card">
+            <img id="img-result-preview" class="img-result-preview hidden" alt="压缩结果预览" />
+            <div id="img-result-empty" class="img-empty-state img-result-empty">生成后会在这里显示预览</div>
+          </div>
+
+          <div id="img-result-meta" class="img-meta">结果：--</div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <footer class="footer">
@@ -209,9 +285,32 @@
       <div class="modal-content">
         <span class="close-btn" onclick="hideSupport()">&times;</span>
         <h3>❤️ 感谢支持！</h3>
-        <p>微信/支付宝扫码打赏</p>
-        <img src="donate.jpg" alt="收款码" style="width:200px;height:200px;border-radius:12px;margin:16px 0;object-fit:cover;" />
-        <p class="hint">也可以联系作者：<strong>yyang0611</strong></p>
+        <div class="support-tabs" role="tablist" aria-label="打赏方式">
+          <button id="support-tab-cn" class="support-tab active" type="button" onclick="switchSupportTab('cn')">国内</button>
+          <button id="support-tab-intl" class="support-tab" type="button" onclick="switchSupportTab('intl')">International</button>
+        </div>
+
+        <div id="support-panel-cn" class="support-panel active" role="tabpanel" aria-labelledby="support-tab-cn">
+          <p>支付宝扫码打赏</p>
+          <img src="donate.png" alt="打赏二维码" class="donation-qr" />
+          <div class="support-contact-row">
+            <p class="hint">也可以联系作者：<strong id="support-contact-text">yyang0611</strong></p>
+            <button id="support-contact-copy-btn" class="btn outline small" type="button" onclick="copySupportContact()">复制联系方式</button>
+          </div>
+        </div>
+
+        <div id="support-panel-intl" class="support-panel hidden" role="tabpanel" aria-labelledby="support-tab-intl">
+          <p class="hint">如果对方没有支付宝，建议使用下面的国际打赏方式：</p>
+          <div class="support-link-list">
+            <a id="paypal-support-link" class="support-link-btn" href="https://www.paypal.com/paypalme/" target="_blank" rel="noreferrer">PayPal 支持</a>
+            <p id="paypal-support-text" class="support-link-text">https://www.paypal.com/paypalme/</p>
+            <a id="bmac-support-link" class="support-link-btn support-link-btn-secondary" href="https://buymeacoffee.com/" target="_blank" rel="noreferrer">Buy Me a Coffee</a>
+            <p id="bmac-support-text" class="support-link-text">https://buymeacoffee.com/</p>
+            <a id="kofi-support-link" class="support-link-btn support-link-btn-tertiary" href="https://ko-fi.com/" target="_blank" rel="noreferrer">Ko-fi</a>
+            <p id="kofi-support-text" class="support-link-text">https://ko-fi.com/</p>
+          </div>
+          <p class="hint">把上面三个渠道配置成你自己的用户名后，就能直接对外使用。</p>
+        </div>
       </div>
     </div>
   </footer>
