@@ -213,20 +213,79 @@ body {
   margin-bottom: 16px;
 }
 .ts-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01)),
+    linear-gradient(135deg, rgba(108,99,255,0.05), rgba(0,212,170,0.035)),
+    var(--surface);
+  border: 1px solid rgba(108, 99, 255, 0.14);
+  border-radius: 14px;
   padding: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.02),
+    0 10px 24px rgba(0,0,0,0.14);
+  overflow: hidden;
+}
+.ts-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(108,99,255,0), rgba(108,99,255,0.28), rgba(0,212,170,0.18), rgba(108,99,255,0));
+  pointer-events: none;
 }
 .ts-value {
   font-family: var(--font-mono);
   font-size: 1.1rem;
   color: var(--accent);
   margin: 10px 0;
-  padding: 8px 12px;
-  background: #0a0a18;
-  border-radius: 6px;
+  padding: 10px 14px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+    rgba(10,10,24,0.9);
+  border: 1px solid rgba(108, 99, 255, 0.18);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.03),
+    0 0 0 1px rgba(108,99,255,0.03);
   word-break: break-all;
+}
+.ts-card > .label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(224, 224, 240, 0.7);
+}
+.ts-card > .label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(108, 99, 255, 0.65);
+  box-shadow: 0 0 10px rgba(108, 99, 255, 0.24);
+}
+.ts-value-stacked {
+  white-space: normal;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.6;
+}
+.ts-copyable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ts-copyable:hover {
+  box-shadow: 0 0 0 1px var(--primary) inset;
+}
+.ts-copyable.copied {
+  color: #fff;
+  background: rgba(0, 212, 170, 0.2);
 }
 .ts-input {
   width: 100%;
@@ -238,6 +297,477 @@ body {
   font-family: var(--font-mono);
   font-size: 0.85rem;
   margin-bottom: 8px;
+}
+.ts-datetime-input,
+.ts-enhanced-input {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-color: rgba(108, 99, 255, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+    linear-gradient(135deg, rgba(108,99,255,0.09), rgba(0,212,170,0.05)),
+    rgba(34,34,64,0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 0 0 1px rgba(108,99,255,0.05);
+}
+.ts-datetime-input {
+  border-color: rgba(108, 99, 255, 0.33);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+    linear-gradient(135deg, rgba(108,99,255,0.11), rgba(0,212,170,0.065)),
+    rgba(34,34,64,0.98);
+  color-scheme: dark;
+}
+.ts-datetime-input:hover {
+  border-color: rgba(108, 99, 255, 0.56);
+}
+.ts-datetime-input:focus {
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 3px rgba(108, 99, 255, 0.14),
+    0 0 16px rgba(108, 99, 255, 0.2);
+}
+.ts-datetime-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.92) sepia(0.08) saturate(1.6) hue-rotate(185deg) brightness(1.05);
+  opacity: 0.9;
+}
+.ts-datetime-input::-webkit-datetime-edit,
+.ts-datetime-input::-webkit-datetime-edit-fields-wrapper,
+.ts-datetime-input::-webkit-datetime-edit-text,
+.ts-datetime-input::-webkit-datetime-edit-month-field,
+.ts-datetime-input::-webkit-datetime-edit-day-field,
+.ts-datetime-input::-webkit-datetime-edit-year-field,
+.ts-datetime-input::-webkit-datetime-edit-hour-field,
+.ts-datetime-input::-webkit-datetime-edit-minute-field {
+  color: var(--text);
+}
+.ts-picker-wrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+.ts-picker-wrap::after,
+.ts-input-group-suffix::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -6px;
+  height: 12px;
+  background: radial-gradient(circle at center, rgba(108,99,255,0.12), rgba(108,99,255,0));
+  opacity: 0.42;
+  pointer-events: none;
+  filter: blur(8px);
+}
+.ts-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 8px;
+}
+.ts-input-group-suffix {
+  position: relative;
+  display: block;
+}
+.ts-input-group .ts-input {
+  margin-bottom: 0;
+}
+.ts-input-group-suffix .ts-input {
+  width: 100%;
+  padding-right: 52px;
+}
+.ts-input-group-suffix:hover .ts-input,
+.ts-input-group-suffix:focus-within .ts-input {
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 3px rgba(108, 99, 255, 0.14),
+    0 0 16px rgba(108, 99, 255, 0.17);
+}
+.ts-inline-trigger {
+  flex: 0 0 auto;
+  min-width: 44px;
+  width: 44px;
+  padding: 0;
+  opacity: 0.78;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ts-input-group-suffix .ts-inline-trigger {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  height: 32px;
+  min-width: 32px;
+  width: 32px;
+  border-radius: 8px;
+  z-index: 2;
+}
+.ts-input-group-suffix:hover .ts-inline-trigger,
+.ts-input-group-suffix:focus-within .ts-inline-trigger {
+  border-color: rgba(108, 99, 255, 0.65);
+  background: rgba(108, 99, 255, 0.14);
+  opacity: 1;
+}
+.ts-inline-trigger:hover {
+  opacity: 1;
+}
+.ts-picker-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  width: min(680px, 95vw);
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(34,34,64,0.98), rgba(18,18,34,0.98));
+  border: 1px solid rgba(108, 99, 255, 0.28);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px);
+}
+.ts-picker-panel.hidden {
+  display: none;
+}
+.ts-picker-header,
+.ts-picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ts-picker-title {
+  font-weight: 700;
+  color: var(--text);
+}
+.ts-picker-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.9fr);
+  gap: 16px;
+  margin: 14px 0;
+}
+.ts-picker-calendar {
+  background: rgba(10,10,24,0.65);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.ts-weekdays,
+.ts-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.ts-weekdays {
+  margin-bottom: 10px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-align: center;
+}
+.ts-picker-day {
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.ts-picker-day:hover {
+  border-color: rgba(108, 99, 255, 0.38);
+  transform: translateY(-1px);
+}
+.ts-picker-day.muted {
+  color: #66668a;
+  background: rgba(34,34,64,0.55);
+}
+.ts-picker-day.today {
+  border-color: rgba(0, 212, 170, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(0, 212, 170, 0.2);
+}
+.ts-picker-day.selected {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 18px rgba(108, 99, 255, 0.32);
+}
+.ts-picker-day.focused-day {
+  outline: 2px solid rgba(255,255,255,0.28);
+  outline-offset: 2px;
+}
+.ts-picker-day.today.selected {
+  background: linear-gradient(135deg, var(--primary), #7f7aff);
+  border-color: rgba(0, 212, 170, 0.82);
+  box-shadow:
+    0 0 22px rgba(108, 99, 255, 0.32),
+    inset 0 0 0 1px rgba(255,255,255,0.14);
+}
+.ts-picker-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ts-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.ts-time-selectors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.ts-time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.ts-select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  outline: none;
+}
+.ts-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.14);
+}
+.ts-picker-preview {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: rgba(10,10,24,0.7);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+.ts-enhanced-input {
+  border-color: rgba(108, 99, 255, 0.28);
+}
+.ts-enhanced-input:hover {
+  border-color: rgba(108, 99, 255, 0.52);
+}
+.ts-enhanced-input:focus {
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 3px rgba(108, 99, 255, 0.14),
+    0 0 16px rgba(108, 99, 255, 0.17);
+}
+.ts-hint {
+  min-height: 20px;
+  margin: 0 0 8px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+.ts-unit-toggle {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ts-unit-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  background: rgba(34,34,64,0.82);
+  border: 1px solid rgba(108, 99, 255, 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+.ts-unit-option:hover {
+  border-color: rgba(108, 99, 255, 0.26);
+  background: rgba(40,40,74,0.96);
+  transform: translateY(-1px);
+}
+.ts-unit-option input {
+  accent-color: var(--primary);
+}
+.ts-now-panel {
+  position: relative;
+  margin-top: 14px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(108, 99, 255, 0.12);
+}
+.ts-now-panel .ts-copyable:hover {
+  box-shadow: none;
+}
+.ts-now-live {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 212, 170, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 212, 170, 0.08);
+}
+.ts-now-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #2cffb7;
+  box-shadow: 0 0 0 0 rgba(44, 255, 183, 0.5);
+}
+.ts-now-live-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #7ef5cf;
+}
+.ts-now-live-milliseconds .ts-now-live-dot {
+  animation: ts-live-breathe 2.2s ease-in-out infinite;
+}
+.ts-now-live-seconds .ts-now-live-dot {
+  animation: none;
+}
+.ts-now-live-tick .ts-now-live-dot {
+  animation: ts-live-tick 0.72s ease-out;
+}
+.ts-now-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border: 1px solid rgba(108, 99, 255, 0.14);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+    rgba(10,10,24,0.78);
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+.ts-now-row:first-child {
+  margin-top: 0;
+}
+.ts-now-row:hover {
+  border-color: rgba(108, 99, 255, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)),
+    rgba(10,10,24,0.9);
+  transform: translateY(-1px);
+}
+.ts-now-row-live-tick {
+  animation: ts-row-live-tick 0.9s ease-out;
+}
+.ts-now-row-seconds-flash .ts-now-data {
+  animation: ts-seconds-data-flash 0.52s ease-out;
+}
+.ts-now-key {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+}
+.ts-now-data {
+  min-width: 0;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--accent);
+  text-align: right;
+  word-break: break-all;
+  transform-origin: 50% 50%;
+}
+.ts-now-data-wide {
+  color: var(--text);
+  word-break: break-word;
+}
+.ts-now-data-roll {
+  animation: ts-now-data-roll 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes ts-live-breathe {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.78;
+    box-shadow: 0 0 0 0 rgba(44, 255, 183, 0.3);
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 6px rgba(44, 255, 183, 0.08);
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.78;
+    box-shadow: 0 0 0 0 rgba(44, 255, 183, 0);
+  }
+}
+@keyframes ts-live-tick {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(44, 255, 183, 0.46);
+    opacity: 0.88;
+  }
+  35% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 10px rgba(44, 255, 183, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.94);
+    box-shadow: 0 0 0 0 rgba(44, 255, 183, 0);
+    opacity: 0.96;
+  }
+}
+@keyframes ts-row-live-tick {
+  0% {
+    border-color: rgba(108, 99, 255, 0.14);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+      rgba(10,10,24,0.78);
+  }
+  35% {
+    border-color: rgba(0, 212, 170, 0.24);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015)),
+      rgba(10,18,26,0.92);
+  }
+  100% {
+    border-color: rgba(108, 99, 255, 0.14);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)),
+      rgba(10,10,24,0.78);
+  }
+}
+@keyframes ts-seconds-data-flash {
+  0% {
+    opacity: 0.92;
+    text-shadow: none;
+  }
+  28% {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(0, 212, 170, 0.28);
+  }
+  100% {
+    opacity: 1;
+    text-shadow: none;
+  }
+}
+@keyframes ts-now-data-roll {
+  0% {
+    opacity: 0.55;
+    transform: translateY(5px);
+    filter: blur(0.6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
 }
 
 /* === Footer === */
@@ -300,6 +830,18 @@ body {
   .diff-grid { grid-template-columns: 1fr; }
   .tabs { gap: 6px; }
   .tab { font-size: 0.8rem; padding: 6px 12px; }
+  .ts-picker-panel {
+    width: min(100%, 95vw);
+  }
+  .ts-picker-layout {
+    grid-template-columns: 1fr;
+  }
+  .ts-time-selectors {
+    grid-template-columns: 1fr;
+  }
+  .ts-input-group {
+    flex-direction: column;
+  }
 }
 
 /* === Scrollbar === */

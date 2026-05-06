@@ -103,23 +103,99 @@
       <h2>时间戳转换</h2>
       <div class="ts-row">
         <div class="ts-card">
-          <label class="label">当前时间</label>
-          <div class="ts-value" id="ts-now-display">--</div>
-          <button class="btn small" onclick="refreshNow()">🔄 刷新</button>
+          <label class="label">时间戳单位</label>
+          <div class="ts-unit-toggle" role="radiogroup" aria-label="时间戳单位选择">
+            <label class="ts-unit-option">
+              <input type="radio" name="ts-unit" value="seconds" checked onchange="onTimestampUnitChange()" />
+              <span>秒</span>
+            </label>
+            <label class="ts-unit-option">
+              <input type="radio" name="ts-unit" value="milliseconds" onchange="onTimestampUnitChange()" />
+              <span>毫秒</span>
+            </label>
+          </div>
+          <div class="ts-now-panel" aria-label="当前时间实时状态">
+            <div class="ts-now-live" aria-hidden="true">
+              <span class="ts-now-live-dot"></span>
+              <span class="ts-now-live-text">LIVE</span>
+            </div>
+            <div class="ts-now-row ts-copyable" onclick="copyTimestampResult('ts-now-timestamp')" title="点击复制当前时间戳">
+              <span class="ts-now-key">当前时间戳</span>
+              <span class="ts-now-data" id="ts-now-timestamp">--</span>
+            </div>
+            <div class="ts-now-row ts-copyable" onclick="copyTimestampResult('ts-now-display')" title="点击复制当前时间">
+              <span class="ts-now-key">当前时间</span>
+              <span class="ts-now-data ts-now-data-wide" id="ts-now-display">--</span>
+            </div>
+          </div>
         </div>
       </div>
       <div class="ts-row">
         <div class="ts-card">
           <label class="label">时间 → 时间戳</label>
-          <input type="datetime-local" id="ts-datetime" class="ts-input" />
-          <button class="btn primary small" onclick="dateToTs()">转换</button>
-          <div class="ts-value" id="ts-to-ts">--</div>
+          <div class="ts-picker-wrap">
+            <input type="text" id="ts-datetime" class="ts-input ts-datetime-input" placeholder="选择日期和时间" readonly onclick="openTimestampPicker('datetime')" />
+            <div id="ts-picker-panel" class="ts-picker-panel hidden">
+              <div class="ts-picker-header">
+                <button class="btn outline small" type="button" onclick="changeTimestampPickerMonth(-1)">‹</button>
+                <div id="ts-picker-title" class="ts-picker-title">--</div>
+                <button class="btn outline small" type="button" onclick="changeTimestampPickerMonth(1)">›</button>
+              </div>
+
+              <div class="ts-picker-layout">
+                <div class="ts-picker-calendar">
+                  <div class="ts-weekdays">
+                    <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+                  </div>
+                  <div id="ts-picker-days" class="ts-picker-days"></div>
+                </div>
+
+                <div class="ts-picker-side">
+                  <div class="ts-quick-actions">
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('now')">此刻</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('today')">今天</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('yesterday')">昨天</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('tomorrow')">明天</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('weekStart')">本周一</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('monthStart')">本月1号</button>
+                    <button class="btn outline small" type="button" onclick="clearTimestampPicker()">清空</button>
+                  </div>
+
+                  <div class="ts-time-selectors">
+                    <label class="ts-time-field">
+                      <span>时</span>
+                      <select id="ts-picker-hour" class="ts-select" onchange="onTimestampPickerTimeChange()"></select>
+                    </label>
+                    <label class="ts-time-field">
+                      <span>分</span>
+                      <select id="ts-picker-minute" class="ts-select" onchange="onTimestampPickerTimeChange()"></select>
+                    </label>
+                    <label class="ts-time-field">
+                      <span>秒</span>
+                      <select id="ts-picker-second" class="ts-select" onchange="onTimestampPickerTimeChange()"></select>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div id="ts-picker-preview" class="ts-picker-preview">--</div>
+
+              <div class="ts-picker-actions">
+                <button class="btn outline small" type="button" onclick="closeTimestampPicker()">取消</button>
+                <button class="btn primary small" type="button" onclick="confirmTimestampPicker()">确定</button>
+              </div>
+            </div>
+          </div>
+          <div class="ts-value ts-copyable" id="ts-to-ts" onclick="copyTimestampResult('ts-to-ts')" title="点击复制结果">--</div>
         </div>
         <div class="ts-card">
           <label class="label">时间戳 → 时间</label>
-          <input type="text" id="ts-timestamp" class="ts-input" placeholder="输入时间戳（秒）" />
-          <button class="btn primary small" onclick="tsToDate()">转换</button>
-          <div class="ts-value" id="ts-to-date">--</div>
+          <div class="ts-input-group ts-input-group-suffix">
+            <input type="text" id="ts-timestamp" class="ts-input ts-enhanced-input" placeholder="输入时间戳（秒）" />
+            <button class="btn outline small ts-inline-trigger" type="button" onclick="openTimestampPicker('timestamp')" title="选择时间" aria-label="选择时间">📅</button>
+          </div>
+          <div id="ts-detect-hint" class="ts-hint"></div>
+          <div class="ts-value ts-copyable" id="ts-to-date" onclick="copyTimestampResult('ts-to-date')" title="点击复制结果">--</div>
         </div>
       </div>
     </section>
