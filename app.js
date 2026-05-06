@@ -220,6 +220,7 @@ function ensureTimestampPickerSelection() {
 function openTimestampPicker(mode = 'datetime') {
   initTimestampPickerSelectors();
   const panel = document.getElementById('ts-picker-panel');
+  if (!panel) return;
   timestampPickerState.mode = mode;
   const inputValue = mode === 'timestamp'
     ? (() => {
@@ -240,13 +241,68 @@ function openTimestampPicker(mode = 'datetime') {
   updateTimestampPickerPreview();
   panel.classList.remove('hidden');
   setTimeout(() => {
+    updateTimestampPickerPlacement();
     focusTimestampPickerSelection();
   }, 0);
 }
 
 function closeTimestampPicker() {
   const panel = document.getElementById('ts-picker-panel');
-  if (panel) panel.classList.add('hidden');
+  if (!panel) return;
+  panel.classList.add('hidden');
+  panel.classList.remove('above', 'viewport-fixed');
+  panel.style.top = '';
+  panel.style.bottom = '';
+  panel.style.maxHeight = '';
+}
+
+function getTimestampPickerAnchor() {
+  if (timestampPickerState.mode === 'timestamp') {
+    return document.querySelector('.ts-input-group-suffix');
+  }
+  return document.querySelector('.ts-picker-wrap');
+}
+
+function updateTimestampPickerPlacement() {
+  const panel = document.getElementById('ts-picker-panel');
+  const anchor = getTimestampPickerAnchor();
+  if (!panel || !anchor || panel.classList.contains('hidden')) return;
+
+  panel.classList.remove('above', 'viewport-fixed');
+  panel.style.top = '';
+  panel.style.bottom = '';
+  panel.style.maxHeight = '';
+
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const isMobile = viewportWidth <= 700;
+  const gap = 8;
+  const edgePadding = isMobile ? 12 : 16;
+  const anchorRect = anchor.getBoundingClientRect();
+
+  if (isMobile) {
+    panel.classList.add('viewport-fixed');
+
+    const fixedTop = Math.max(edgePadding, Math.min(anchorRect.bottom + gap, viewportHeight - edgePadding));
+    const availableHeight = Math.max(220, viewportHeight - fixedTop - edgePadding);
+
+    panel.style.top = `${fixedTop}px`;
+    panel.style.bottom = 'auto';
+    panel.style.maxHeight = `${availableHeight}px`;
+    return;
+  }
+
+  const panelRect = panel.getBoundingClientRect();
+  const spaceBelow = viewportHeight - anchorRect.bottom - gap - edgePadding;
+  const spaceAbove = anchorRect.top - gap - edgePadding;
+
+  if (panelRect.height > spaceBelow && spaceAbove > spaceBelow) {
+    panel.classList.add('above');
+    panel.style.maxHeight = `${Math.max(220, spaceAbove)}px`;
+    return;
+  }
+
+  panel.style.maxHeight = `${Math.max(220, spaceBelow)}px`;
 }
 
 function renderTimestampPickerCalendar() {
@@ -345,6 +401,7 @@ function changeTimestampPickerMonth(delta) {
     timestampPickerState.viewingYear += 1;
   }
   renderTimestampPickerCalendar();
+  updateTimestampPickerPlacement();
 }
 
 function selectTimestampPickerDate(year, month, day) {
@@ -362,6 +419,7 @@ function selectTimestampPickerDate(year, month, day) {
   syncTimestampPickerInput();
   renderTimestampPickerCalendar();
   updateTimestampPickerPreview();
+  updateTimestampPickerPlacement();
 }
 
 function onTimestampPickerTimeChange() {
@@ -386,6 +444,7 @@ function applyTimestampQuickDate(type) {
       syncTimestampPickerInput();
       renderTimestampPickerCalendar();
       updateTimestampPickerPreview();
+      updateTimestampPickerPlacement();
       return;
     case 'today':
       base.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
@@ -415,6 +474,7 @@ function applyTimestampQuickDate(type) {
   syncTimestampPickerInput();
   renderTimestampPickerCalendar();
   updateTimestampPickerPreview();
+  updateTimestampPickerPlacement();
 }
 
 function clearTimestampPicker() {
@@ -424,6 +484,7 @@ function clearTimestampPicker() {
   document.getElementById('ts-picker-hour').value = '00';
   document.getElementById('ts-picker-minute').value = '00';
   document.getElementById('ts-picker-second').value = '00';
+  updateTimestampPickerPlacement();
 }
 
 function confirmTimestampPicker() {
@@ -730,3 +791,6 @@ document.addEventListener('keydown', (e) => {
     confirmTimestampPicker();
   }
 });
+
+window.addEventListener('resize', updateTimestampPickerPlacement);
+window.addEventListener('scroll', updateTimestampPickerPlacement, true);
