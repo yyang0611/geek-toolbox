@@ -11,6 +11,10 @@ const supportConfig = {
 };
 
 /* === Tab 切换 === */
+if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
+
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -141,7 +145,11 @@ const imageToolState = {
   resultBlob: null,
   resultDataUrl: '',
   resultWidth: 0,
-  resultHeight: 0
+  resultHeight: 0,
+  isProcessing: false,
+  isBatchProcessing: false,
+  lastActionMessage: '',
+  lastActionType: ''
 };
 
 function formatBytes(bytes) {
@@ -285,15 +293,48 @@ function renderImageQueue() {
   }
 
   queue.innerHTML = imageToolState.items.map((item, index) => `
-    <button type="button" class="img-queue-item ${index === imageToolState.activeIndex ? 'active' : ''}" onclick="setActiveImageIndex(${index})">
+    <div class="img-queue-item ${index === imageToolState.activeIndex ? 'active' : ''}">
       <img class="img-queue-thumb" src="${item.previewUrl}" alt="${escapeHtml(item.fileName)}" />
-      <span class="img-queue-text">
-        <span class="img-queue-name">${escapeHtml(item.fileName)}</span>
-        <span class="img-queue-sub">${item.naturalWidth} × ${item.naturalHeight} · ${formatBytes(item.originalSize)}</span>
-      </span>
+      <button type="button" class="img-queue-text-btn" onclick="setActiveImageIndex(${index})">
+        <span class="img-queue-text">
+          <span class="img-queue-name">${escapeHtml(item.fileName)}</span>
+          <span class="img-queue-sub">${item.naturalWidth} × ${item.naturalHeight} · ${formatBytes(item.originalSize)}</span>
+        </span>
+      </button>
       <span class="img-queue-badge">${item.useCustomCrop ? '单独' : '共用'}</span>
-    </button>
+      <button type="button" class="img-queue-remove" onclick="removeImageAtIndex(${index})" aria-label="删除 ${escapeHtml(item.fileName)}">×</button>
+    </div>
   `).join('');
+}
+
+function removeImageAtIndex(index) {
+  if (index < 0 || index >= imageToolState.items.length) return;
+  const item = imageToolState.items[index];
+  const shouldDelete = typeof window === 'undefined' || typeof window.confirm !== 'function'
+    ? true
+    : window.confirm(`确认删除这张图片吗？
+
+${item ? item.fileName : ''}`);
+  if (!shouldDelete) return;
+  imageToolState.items.splice(index, 1);
+
+  if (!imageToolState.items.length) {
+    clearImageTool();
+    return;
+  }
+
+  if (imageToolState.activeIndex >= imageToolState.items.length) {
+    imageToolState.activeIndex = imageToolState.items.length - 1;
+  } else if (index < imageToolState.activeIndex) {
+    imageToolState.activeIndex -= 1;
+  }
+
+  syncActiveImageFromItem();
+  renderImageQueue();
+  syncImageMeta();
+  updateImageCompressionSummary();
+  updateImageActionButtons();
+  drawImageEditor();
 }
 
 function setActiveImageIndex(index) {
@@ -370,6 +411,22 @@ function toggleActiveImageCustomCrop(checked) {
   drawImageEditor();
 }
 
+function setImageActionMessage(message = '', type = '') {
+  imageToolState.lastActionMessage = message;
+  imageToolState.lastActionType = type;
+}
+
+function clearImageActionMessageLater(delay = 1800) {
+  if (!imageToolState.lastActionMessage) return;
+  const currentMessage = imageToolState.lastActionMessage;
+  setTimeout(() => {
+    if (imageToolState.lastActionMessage !== currentMessage) return;
+    imageToolState.lastActionMessage = '';
+    imageToolState.lastActionType = '';
+    updateImageCompressionSummary();
+  }, delay);
+}
+
 function onImageDimensionInputChange() {
   const widthInput = document.getElementById('img-max-width');
   const heightInput = document.getElementById('img-max-height');
@@ -389,6 +446,7 @@ function updateImageCompressionSummary() {
   if (!summary) return;
   if (!imageToolState.image || !imageToolState.crop) {
     summary.textContent = '裁剪后可压缩导出，并在下方预览结果。';
+    updateImageActionButtons();
     return;
   }
   const format = document.getElementById('img-format').value.toUpperCase();
@@ -398,7 +456,35 @@ function updateImageCompressionSummary() {
   const exportWidth = normalizeDimensionValue(widthInput && widthInput.value ? widthInput.value : cropWidth, cropWidth);
   const exportHeight = normalizeDimensionValue(heightInput && heightInput.value ? heightInput.value : cropHeight, cropHeight);
 
-  summary.textContent = `导出：${format} · ${exportWidth} × ${exportHeight} · ${imageToolState.items.length > 1 ? '支持批量导出' : '单张导出'}`;
+  summary.textContent = imageToolState.isBatchProcessing
+    ? `正在处理 ${imageToolState.items.length} 张图片并打包 ZIP，请稍候...`
+    : imageToolState.isProcessing
+      ? '正在生成当前图片预览，请稍候...'
+      : imageToolState.lastActionMessage
+        ? imageToolState.lastActionMessage
+        : `导出：${format} · ${exportWidth} × ${exportHeight} · ${imageToolState.items.length > 1 ? '支持批量导出' : '单张导出'}`;
+  updateImageActionButtons();
+}
+
+function updateImageActionButtons() {
+  const generateBtn = document.getElementById('img-generate-btn');
+  const downloadBtn = document.getElementById('img-download-btn');
+  const downloadAllBtn = document.getElementById('img-download-all-btn');
+  const hasActiveImage = Boolean(getActiveImageItem());
+  const hasResult = Boolean(imageToolState.resultBlob);
+  const hasItems = imageToolState.items.length > 0;
+
+  if (generateBtn) {
+    generateBtn.disabled = !hasActiveImage || imageToolState.isProcessing || imageToolState.isBatchProcessing;
+    generateBtn.textContent = imageToolState.isProcessing ? '生成中...' : '生成当前预览';
+  }
+  if (downloadBtn) {
+    downloadBtn.disabled = !hasResult || imageToolState.isProcessing || imageToolState.isBatchProcessing;
+  }
+  if (downloadAllBtn) {
+    downloadAllBtn.disabled = !hasItems || imageToolState.isBatchProcessing || imageToolState.isProcessing;
+    downloadAllBtn.textContent = imageToolState.isBatchProcessing ? '正在打包 ZIP...' : '批量导出全部';
+  }
 }
 
 function onImageQualityChange() {
@@ -415,6 +501,8 @@ function clearImageResult() {
   imageToolState.resultDataUrl = '';
   imageToolState.resultWidth = 0;
   imageToolState.resultHeight = 0;
+  imageToolState.lastActionMessage = '';
+  imageToolState.lastActionType = '';
 
   const preview = document.getElementById('img-result-preview');
   const empty = document.getElementById('img-result-empty');
@@ -474,6 +562,7 @@ function clearImageTool() {
   clearImageResult();
   syncImageMeta();
   updateImageCompressionSummary();
+  updateImageActionButtons();
 }
 
 function resetImageCrop() {
@@ -739,8 +828,19 @@ function generateCompressedImage() {
   const item = getActiveImageItem();
   if (!item || !imageToolState.crop) return;
 
+  imageToolState.isProcessing = true;
+  updateImageCompressionSummary();
+  updateImageActionButtons();
+
   createCompressedBlobForItem(item).then(({ blob, exportWidth, exportHeight, format }) => {
-    if (!blob) return;
+    if (!blob) {
+      imageToolState.isProcessing = false;
+      setImageActionMessage('生成失败：浏览器未能产出图片数据，请重试。', 'error');
+      updateImageCompressionSummary();
+      updateImageActionButtons();
+      clearImageActionMessageLater(2400);
+      return;
+    }
     imageToolState.resultBlob = blob;
     imageToolState.resultWidth = exportWidth;
     imageToolState.resultHeight = exportHeight;
@@ -762,14 +862,30 @@ function generateCompressedImage() {
       if (meta) {
         meta.textContent = `结果：${exportWidth} × ${exportHeight} · ${formatBytes(blob.size)} · ${format.toUpperCase()} · 当前图片`;
       }
+      imageToolState.isProcessing = false;
+      setImageActionMessage('当前图片预览已生成，可直接下载或继续批量导出。', 'success');
+      updateImageCompressionSummary();
+      updateImageActionButtons();
+      clearImageActionMessageLater();
     };
     reader.readAsDataURL(blob);
+  }).catch(() => {
+    imageToolState.isProcessing = false;
+    setImageActionMessage('生成失败：处理当前图片时出现错误。', 'error');
+    updateImageCompressionSummary();
+    updateImageActionButtons();
+    clearImageActionMessageLater(2400);
   });
 }
 
 function downloadCompressedImage() {
   const item = getActiveImageItem();
-  if (!item || !imageToolState.resultBlob) return;
+  if (!item || !imageToolState.resultBlob) {
+    setImageActionMessage('下载失败：当前还没有可下载的结果，请先生成预览。', 'error');
+    updateImageCompressionSummary();
+    clearImageActionMessageLater(2200);
+    return;
+  }
   const ext = document.getElementById('img-format').value === 'png' ? 'png' : 'jpg';
   const baseName = item.fileName ? item.fileName.replace(/\.[^.]+$/, '') : 'compressed-image';
   const url = URL.createObjectURL(imageToolState.resultBlob);
@@ -780,24 +896,151 @@ function downloadCompressedImage() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  setImageActionMessage(`已导出当前图片：${baseName}-cropped.${ext}`, 'success');
+  updateImageCompressionSummary();
+  clearImageActionMessageLater();
+}
+
+
+const zipCrcTable = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) {
+    crc = zipCrcTable[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function writeUint16(view, offset, value) {
+  view.setUint16(offset, value, true);
+}
+
+function writeUint32(view, offset, value) {
+  view.setUint32(offset, value, true);
+}
+
+function createZipBlob(entries) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  entries.forEach(entry => {
+    const nameBytes = encoder.encode(entry.name);
+    const dataBytes = entry.bytes;
+    const crc = crc32(dataBytes);
+
+    const localHeader = new Uint8Array(30 + nameBytes.length);
+    const localView = new DataView(localHeader.buffer);
+    writeUint32(localView, 0, 0x04034b50);
+    writeUint16(localView, 4, 20);
+    writeUint16(localView, 6, 0);
+    writeUint16(localView, 8, 0);
+    writeUint16(localView, 10, 0);
+    writeUint16(localView, 12, 0);
+    writeUint32(localView, 14, crc);
+    writeUint32(localView, 18, dataBytes.length);
+    writeUint32(localView, 22, dataBytes.length);
+    writeUint16(localView, 26, nameBytes.length);
+    writeUint16(localView, 28, 0);
+    localHeader.set(nameBytes, 30);
+
+    localParts.push(localHeader, dataBytes);
+
+    const centralHeader = new Uint8Array(46 + nameBytes.length);
+    const centralView = new DataView(centralHeader.buffer);
+    writeUint32(centralView, 0, 0x02014b50);
+    writeUint16(centralView, 4, 20);
+    writeUint16(centralView, 6, 20);
+    writeUint16(centralView, 8, 0);
+    writeUint16(centralView, 10, 0);
+    writeUint16(centralView, 12, 0);
+    writeUint16(centralView, 14, 0);
+    writeUint32(centralView, 16, crc);
+    writeUint32(centralView, 20, dataBytes.length);
+    writeUint32(centralView, 24, dataBytes.length);
+    writeUint16(centralView, 28, nameBytes.length);
+    writeUint16(centralView, 30, 0);
+    writeUint16(centralView, 32, 0);
+    writeUint16(centralView, 34, 0);
+    writeUint16(centralView, 36, 0);
+    writeUint32(centralView, 38, 0);
+    writeUint32(centralView, 42, offset);
+    centralHeader.set(nameBytes, 46);
+
+    centralParts.push(centralHeader);
+    offset += localHeader.length + dataBytes.length;
+  });
+
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const endRecord = new Uint8Array(22);
+  const endView = new DataView(endRecord.buffer);
+  writeUint32(endView, 0, 0x06054b50);
+  writeUint16(endView, 4, 0);
+  writeUint16(endView, 6, 0);
+  writeUint16(endView, 8, entries.length);
+  writeUint16(endView, 10, entries.length);
+  writeUint32(endView, 12, centralSize);
+  writeUint32(endView, 16, offset);
+  writeUint16(endView, 20, 0);
+
+  return new Blob([...localParts, ...centralParts, endRecord], { type: 'application/zip' });
 }
 
 function downloadAllCompressedImages() {
   if (!imageToolState.items.length) return;
-  imageToolState.items.forEach((item, index) => {
-    createCompressedBlobForItem(item).then(({ blob, format }) => {
-      if (!blob) return;
-      const ext = format === 'png' ? 'png' : 'jpg';
-      const baseName = item.fileName ? item.fileName.replace(/\.[^.]+$/, '') : `compressed-image-${index + 1}`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${baseName}-cropped.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
+  imageToolState.isBatchProcessing = true;
+  updateImageCompressionSummary();
+  updateImageActionButtons();
+  Promise.all(imageToolState.items.map((item, index) => createCompressedBlobForItem(item).then(({ blob, format }) => {
+    if (!blob) return null;
+    const ext = format === 'png' ? 'png' : 'jpg';
+    const baseName = item.fileName ? item.fileName.replace(/\.[^.]+$/, '') : `compressed-image-${index + 1}`;
+    return blob.arrayBuffer().then(buffer => ({
+      name: `${baseName}-cropped.${ext}`,
+      bytes: new Uint8Array(buffer)
+    }));
+  }))).then(results => {
+    const entries = results.filter(Boolean);
+    if (!entries.length) {
+      imageToolState.isBatchProcessing = false;
+      setImageActionMessage('打包失败：没有可导出的图片结果。', 'error');
+      updateImageCompressionSummary();
+      updateImageActionButtons();
+      clearImageActionMessageLater(2400);
+      return;
+    }
+    const zipBlob = createZipBlob(entries);
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'geek-toolbox-images.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    imageToolState.isBatchProcessing = false;
+    setImageActionMessage(`ZIP 打包完成：已导出 ${entries.length} 个文件`, 'success');
+    updateImageCompressionSummary();
+    updateImageActionButtons();
+    clearImageActionMessageLater();
+  }).catch(() => {
+    imageToolState.isBatchProcessing = false;
+    setImageActionMessage('打包失败：批量导出过程中出现错误。', 'error');
+    updateImageCompressionSummary();
+    updateImageActionButtons();
+    clearImageActionMessageLater(2400);
   });
 }
 
@@ -876,6 +1119,388 @@ function onImageDragOver(event) {
 function onImageDragLeave() {
   const wrap = document.getElementById('img-canvas-wrap');
   if (wrap) wrap.classList.remove('drag-over');
+}
+
+
+const fileConvertState = {
+  file: null,
+  type: 'xlsx-to-csv',
+  workbookSheetNames: [],
+  resultBlob: null,
+  resultName: '',
+  resultText: '',
+  resultImages: [],
+  isProcessing: false,
+  lastMessage: ''
+};
+
+function updateConvertAdvancedOptions() {
+  const advanced = document.getElementById('convert-advanced-options');
+  const sheetWrap = document.getElementById('convert-sheet-wrap');
+  const sheetModeWrap = document.getElementById('convert-sheet-mode-wrap');
+  const pdfScaleWrap = document.getElementById('convert-pdf-scale-wrap');
+  const pdfPagesWrap = document.getElementById('convert-pdf-pages-wrap');
+  const type = fileConvertState.type;
+  const showSheet = type === 'xlsx-to-csv' && fileConvertState.workbookSheetNames.length > 0;
+  const showSheetMode = type === 'xlsx-to-csv' && fileConvertState.workbookSheetNames.length > 1;
+  const showPdfScale = type === 'pdf-to-images';
+  const showPdfPages = type === 'pdf-to-images';
+
+  if (advanced) advanced.classList.toggle('hidden', !showSheet && !showSheetMode && !showPdfScale && !showPdfPages);
+  if (sheetWrap) sheetWrap.classList.toggle('hidden', !showSheet);
+  if (sheetModeWrap) sheetModeWrap.classList.toggle('hidden', !showSheetMode);
+  if (pdfScaleWrap) pdfScaleWrap.classList.toggle('hidden', !showPdfScale);
+  if (pdfPagesWrap) pdfPagesWrap.classList.toggle('hidden', !showPdfPages);
+}
+
+function populateWorkbookSheetOptions(sheetNames = []) {
+  fileConvertState.workbookSheetNames = sheetNames;
+  const select = document.getElementById('convert-sheet-select');
+  if (!select) return;
+  select.innerHTML = sheetNames.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+  updateConvertAdvancedOptions();
+}
+
+function updateConvertButtons() {
+  const runBtn = document.getElementById('convert-run-btn');
+  const downloadBtn = document.getElementById('convert-download-btn');
+  if (runBtn) {
+    runBtn.disabled = !fileConvertState.file || fileConvertState.isProcessing;
+    runBtn.textContent = fileConvertState.isProcessing ? '转换中...' : '开始转换';
+  }
+  if (downloadBtn) {
+    const hasResult = Boolean(fileConvertState.resultBlob || fileConvertState.resultImages.length);
+    downloadBtn.disabled = !hasResult || fileConvertState.isProcessing;
+  }
+}
+
+function setConvertMessage(message) {
+  fileConvertState.lastMessage = message;
+  const hint = document.getElementById('convert-hint');
+  if (hint) hint.textContent = message;
+}
+
+function restoreConvertHint() {
+  onConvertTypeChange();
+}
+
+function onConvertTypeChange() {
+  const type = document.getElementById('convert-type').value;
+  const input = document.getElementById('convert-input');
+  const hint = document.getElementById('convert-hint');
+  fileConvertState.type = type;
+
+  const config = {
+    'xlsx-to-csv': { accept: '.xlsx,.xls', hint: '上传 Excel 文件，转换为 CSV 文本。' },
+    'csv-to-xlsx': { accept: '.csv', hint: '上传 CSV 文件，转换为 XLSX 表格。' },
+    'docx-to-txt': { accept: '.docx', hint: '上传 Word 文档，提取为纯文本 TXT。' },
+    'pdf-to-text': { accept: '.pdf', hint: '上传 PDF 文件，提取文本内容。' },
+    'pdf-to-images': { accept: '.pdf', hint: '上传 PDF 文件，将每页渲染为图片。' }
+  }[type];
+
+  if (input) input.accept = config.accept;
+  if (hint) hint.textContent = config.hint + ' 所有转换都在浏览器本地完成，不会上传到服务器。';
+  fileConvertState.lastMessage = '';
+  if (type !== 'xlsx-to-csv') {
+    populateWorkbookSheetOptions([]);
+  } else {
+    updateConvertAdvancedOptions();
+  }
+  clearFileConversionResult();
+  restoreConvertHint();
+  updateConvertButtons();
+}
+
+function clearFileConversionResult() {
+  fileConvertState.resultBlob = null;
+  fileConvertState.resultName = '';
+  fileConvertState.resultText = '';
+  fileConvertState.resultImages = [];
+  fileConvertState.lastMessage = '';
+
+  const preview = document.getElementById('convert-result-preview');
+  const meta = document.getElementById('convert-result-meta');
+  if (preview) preview.innerHTML = '转换结果会显示在这里';
+  if (meta) meta.textContent = '结果：--';
+}
+
+function clearFileConversion() {
+  fileConvertState.file = null;
+  fileConvertState.isProcessing = false;
+  populateWorkbookSheetOptions([]);
+  const input = document.getElementById('convert-input');
+  const meta = document.getElementById('convert-file-meta');
+  if (input) input.value = '';
+  if (meta) meta.textContent = '请选择需要转换的文件';
+  clearFileConversionResult();
+  updateConvertButtons();
+}
+
+async function onConvertFileChange(event) {
+  const file = event.target.files && event.target.files[0];
+  fileConvertState.file = file || null;
+  const meta = document.getElementById('convert-file-meta');
+  restoreConvertHint();
+  if (meta) {
+    meta.textContent = file ? `当前文件：${file.name} · ${formatBytes(file.size)}` : '请选择需要转换的文件';
+  }
+  clearFileConversionResult();
+
+  if (file && fileConvertState.type === 'xlsx-to-csv') {
+    try {
+      const workbook = XLSX.read(await readFileAsArrayBuffer(file), { type: 'array', bookSheets: true });
+      populateWorkbookSheetOptions(workbook.SheetNames || []);
+    } catch {
+      populateWorkbookSheetOptions([]);
+    }
+  } else {
+    populateWorkbookSheetOptions([]);
+  }
+
+  updateConvertButtons();
+}
+
+function setConvertResultText(name, text) {
+  fileConvertState.resultText = text;
+  fileConvertState.resultName = name;
+  fileConvertState.resultBlob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const preview = document.getElementById('convert-result-preview');
+  const meta = document.getElementById('convert-result-meta');
+  if (preview) preview.textContent = text || '转换完成，但结果为空';
+  if (meta) meta.textContent = `结果：${name} · ${formatBytes(fileConvertState.resultBlob.size)}`;
+}
+
+function setConvertResultBlob(name, blob, previewText) {
+  fileConvertState.resultBlob = blob;
+  fileConvertState.resultName = name;
+  const preview = document.getElementById('convert-result-preview');
+  const meta = document.getElementById('convert-result-meta');
+  if (preview) preview.textContent = previewText;
+  if (meta) meta.textContent = `结果：${name} · ${formatBytes(blob.size)}`;
+}
+
+function setConvertResultImages(images) {
+  fileConvertState.resultImages = images;
+  fileConvertState.resultName = 'pdf-pages.zip';
+  const preview = document.getElementById('convert-result-preview');
+  const meta = document.getElementById('convert-result-meta');
+  if (preview) {
+    preview.innerHTML = `<div class="convert-image-grid">${images.map((item, index) => `<div class="convert-image-card"><img src="${item.url}" alt="Page ${index + 1}" /><span>第 ${index + 1} 页</span></div>`).join('')}</div>`;
+  }
+  if (meta) {
+    meta.textContent = `结果：共 ${images.length} 页图片，可打包下载`;
+  }
+}
+
+function readFileAsArrayBuffer(file) {
+  return file.arrayBuffer();
+}
+
+function parsePdfPageSelection(input, totalPages) {
+  if (!input || !input.trim()) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const pages = new Set();
+  const parts = input.split(',').map(part => part.trim()).filter(Boolean);
+
+  for (const part of parts) {
+    if (/^\d+$/.test(part)) {
+      const page = Number(part);
+      if (page < 1 || page > totalPages) {
+        throw new Error(`页码超出范围：${page}`);
+      }
+      pages.add(page);
+      continue;
+    }
+
+    const rangeMatch = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (rangeMatch) {
+      let start = Number(rangeMatch[1]);
+      let end = Number(rangeMatch[2]);
+      if (start > end) {
+        [start, end] = [end, start];
+      }
+      if (start < 1 || end > totalPages) {
+        throw new Error(`页码范围超出限制：${part}`);
+      }
+      for (let page = start; page <= end; page += 1) {
+        pages.add(page);
+      }
+      continue;
+    }
+
+    throw new Error(`无法识别的页码范围：${part}`);
+  }
+
+  return Array.from(pages).sort((a, b) => a - b);
+}
+
+async function runFileConversion() {
+  if (!fileConvertState.file || fileConvertState.isProcessing) return;
+  fileConvertState.isProcessing = true;
+  clearFileConversionResult();
+  const preview = document.getElementById('convert-result-preview');
+  if (preview) preview.textContent = '正在转换，请稍候...';
+  setConvertMessage('正在转换，请稍候...');
+  updateConvertButtons();
+
+  try {
+    const file = fileConvertState.file;
+    const type = fileConvertState.type;
+
+    if (type === 'xlsx-to-csv') {
+      const workbook = XLSX.read(await readFileAsArrayBuffer(file), { type: 'array' });
+      const sheetMode = document.getElementById('convert-sheet-mode');
+      const mode = sheetMode ? sheetMode.value : 'single';
+      if (mode === 'all' && workbook.SheetNames.length > 1) {
+        const entries = workbook.SheetNames.map(sheetName => ({
+          name: `${file.name.replace(/\.[^.]+$/, '')}-${sheetName}.csv`,
+          bytes: new TextEncoder().encode(XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]))
+        }));
+        const zipBlob = createZipBlob(entries);
+        fileConvertState.resultBlob = zipBlob;
+        fileConvertState.resultName = `${file.name.replace(/\.[^.]+$/, '')}-worksheets.zip`;
+        const preview = document.getElementById('convert-result-preview');
+        const meta = document.getElementById('convert-result-meta');
+        if (preview) preview.textContent = `已生成 ${entries.length} 个工作表 CSV，并打包为 ZIP。`;
+        if (meta) meta.textContent = `结果：${fileConvertState.resultName} · ${formatBytes(zipBlob.size)}`;
+        setConvertMessage(`转换完成：${entries.length} 个工作表已导出为 CSV ZIP。`);
+      } else {
+        const sheetSelect = document.getElementById('convert-sheet-select');
+        const selectedSheet = sheetSelect && sheetSelect.value ? sheetSelect.value : workbook.SheetNames[0];
+        const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[selectedSheet]);
+        setConvertResultText(`${file.name.replace(/\.[^.]+$/, '')}-${selectedSheet}.csv`, csv);
+        setConvertMessage(`转换完成：工作表 ${selectedSheet} 已成功转换为 CSV。`);
+      }
+    } else if (type === 'csv-to-xlsx') {
+      const csvText = await file.text();
+      const worksheet = XLSX.utils.aoa_to_sheet(csvText.split(/\r?\n/).map(line => line.split(',')));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+      const arrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      setConvertResultBlob(file.name.replace(/\.[^.]+$/, '') + '.xlsx', blob, 'CSV 已转换为 XLSX，可点击下载结果。');
+      setConvertMessage('转换完成：CSV 已成功转换为 XLSX。');
+    } else if (type === 'docx-to-txt') {
+      const result = await mammoth.extractRawText({ arrayBuffer: await readFileAsArrayBuffer(file) });
+      setConvertResultText(file.name.replace(/\.[^.]+$/, '') + '.txt', result.value.trim());
+      setConvertMessage('转换完成：DOCX 已提取为 TXT。');
+    } else if (type === 'pdf-to-text') {
+      const pdf = await pdfjsLib.getDocument({ data: await readFileAsArrayBuffer(file) }).promise;
+      const texts = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        texts.push(`--- 第 ${i} 页 ---\n` + content.items.map(item => item.str).join(' '));
+      }
+      setConvertResultText(file.name.replace(/\.[^.]+$/, '') + '.txt', texts.join('\n\n'));
+    } else if (type === 'pdf-to-images') {
+      const pdf = await pdfjsLib.getDocument({ data: await readFileAsArrayBuffer(file) }).promise;
+      const pageInput = document.getElementById('convert-pdf-pages');
+      const selectedPages = parsePdfPageSelection(pageInput ? pageInput.value : '', pdf.numPages);
+      const images = [];
+      for (const pageNumber of selectedPages) {
+        const page = await pdf.getPage(pageNumber);
+        const scaleSelect = document.getElementById('convert-pdf-scale');
+        const scale = scaleSelect ? Number(scaleSelect.value || 1.5) : 1.5;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const url = URL.createObjectURL(blob);
+        images.push({ blob, url, name: `page-${pageNumber}.png` });
+      }
+      setConvertResultImages(images);
+      setConvertMessage(`转换完成：已生成 ${images.length} 页图片预览。`);
+    }
+  } catch (error) {
+    const preview = document.getElementById('convert-result-preview');
+    const meta = document.getElementById('convert-result-meta');
+    const message = `转换失败：${error.message || '未知错误'}`;
+    if (preview) preview.textContent = message;
+    if (meta) meta.textContent = '结果：转换失败';
+    setConvertMessage(message);
+  } finally {
+    fileConvertState.isProcessing = false;
+    updateConvertButtons();
+  }
+}
+
+function downloadFileConversionResult() {
+  if (fileConvertState.resultImages.length) {
+    setConvertMessage(`正在准备 ${fileConvertState.resultImages.length} 张图片的 ZIP 下载...`);
+    Promise.all(fileConvertState.resultImages.map(item => item.blob.arrayBuffer().then(buffer => ({ name: item.name, bytes: new Uint8Array(buffer) })))).then(entries => {
+      const zipBlob = createZipBlob(entries);
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pdf-pages.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setConvertMessage('下载完成：PDF 页面图片 ZIP 已导出。');
+    });
+    return;
+  }
+
+  if (!fileConvertState.resultBlob) {
+    setConvertMessage('下载失败：当前没有可下载的转换结果。');
+    return;
+  }
+  const url = URL.createObjectURL(fileConvertState.resultBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileConvertState.resultName || 'converted-file';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setConvertMessage(`下载完成：${fileConvertState.resultName || 'converted-file'}`);
+}
+
+function onConvertDragOver(event) {
+  event.preventDefault();
+  const dropzone = document.getElementById('convert-dropzone');
+  if (dropzone) dropzone.classList.add('drag-over');
+}
+
+function onConvertDragLeave() {
+  const dropzone = document.getElementById('convert-dropzone');
+  if (dropzone) dropzone.classList.remove('drag-over');
+}
+
+function onConvertDrop(event) {
+  event.preventDefault();
+  const dropzone = document.getElementById('convert-dropzone');
+  if (dropzone) dropzone.classList.remove('drag-over');
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if (!file) return;
+  fileConvertState.file = file;
+  const input = document.getElementById('convert-input');
+  const meta = document.getElementById('convert-file-meta');
+  if (input) input.value = '';
+  if (meta) meta.textContent = `当前文件：${file.name} · ${formatBytes(file.size)}`;
+  clearFileConversionResult();
+  restoreConvertHint();
+  if (fileConvertState.type === 'xlsx-to-csv') {
+    readFileAsArrayBuffer(file).then(buffer => {
+      try {
+        const workbook = XLSX.read(buffer, { type: 'array', bookSheets: true });
+        populateWorkbookSheetOptions(workbook.SheetNames || []);
+      } catch {
+        populateWorkbookSheetOptions([]);
+      }
+      updateConvertButtons();
+    });
+  } else {
+    populateWorkbookSheetOptions([]);
+    updateConvertButtons();
+  }
 }
 
 const timestampPickerState = {
@@ -1674,6 +2299,8 @@ window.addEventListener('scroll', updateTimestampPickerPlacement, true);
 const imageInput = document.getElementById('img-input');
 const imageCanvas = getImageCanvas();
 const imageCanvasWrap = document.getElementById('img-canvas-wrap');
+const convertInput = document.getElementById('convert-input');
+const convertDropzone = document.getElementById('convert-dropzone');
 
 if (imageInput) {
   imageInput.addEventListener('change', onImageInputChange);
@@ -1692,6 +2319,16 @@ if (imageCanvasWrap) {
   imageCanvasWrap.addEventListener('drop', onImageDrop);
 }
 
+if (convertInput) {
+  convertInput.addEventListener('change', onConvertFileChange);
+}
+
+if (convertDropzone) {
+  convertDropzone.addEventListener('dragover', onConvertDragOver);
+  convertDropzone.addEventListener('dragleave', onConvertDragLeave);
+  convertDropzone.addEventListener('drop', onConvertDrop);
+}
+
 window.addEventListener('resize', () => {
   if (imageToolState.image) {
     drawImageEditor();
@@ -1703,3 +2340,7 @@ renderImageQueue();
 updateImageCompressionSummary();
 syncImageMeta();
 clearImageResult();
+updateImageActionButtons();
+onConvertTypeChange();
+updateConvertAdvancedOptions();
+updateConvertButtons();

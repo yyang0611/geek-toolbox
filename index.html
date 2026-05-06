@@ -15,6 +15,7 @@
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tool="timestamp">时间戳</button>
     <button class="tab" data-tool="image">图片压缩</button>
+    <button class="tab" data-tool="convert">文件转换</button>
     <button class="tab" data-tool="json">JSON 格式化</button>
     <button class="tab" data-tool="diff">文本对比</button>
     <button class="tab" data-tool="base64">Base64</button>
@@ -261,9 +262,9 @@
           <div id="img-export-summary" class="img-hint">裁剪后可压缩导出，并在下方预览结果。</div>
 
           <div class="btn-row">
-            <button class="btn primary" type="button" onclick="generateCompressedImage()">生成当前预览</button>
-            <button class="btn outline" type="button" onclick="downloadCompressedImage()">下载当前</button>
-            <button class="btn" type="button" onclick="downloadAllCompressedImages()">批量导出全部</button>
+            <button id="img-generate-btn" class="btn primary" type="button" onclick="generateCompressedImage()">生成当前预览</button>
+            <button id="img-download-btn" class="btn outline" type="button" onclick="downloadCompressedImage()">下载当前</button>
+            <button id="img-download-all-btn" class="btn" type="button" onclick="downloadAllCompressedImages()">批量导出全部</button>
           </div>
 
           <div class="img-result-card">
@@ -272,6 +273,73 @@
           </div>
 
           <div id="img-result-meta" class="img-meta">结果：--</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 文件转换 -->
+    <section id="tool-convert" class="tool-panel">
+      <h2>文件转换</h2>
+      <div class="convert-grid">
+        <div class="convert-card">
+          <label class="label">选择转换类型</label>
+          <select id="convert-type" class="ts-select" onchange="onConvertTypeChange()">
+            <option value="xlsx-to-csv">XLSX → CSV</option>
+            <option value="csv-to-xlsx">CSV → XLSX</option>
+            <option value="docx-to-txt">DOCX → TXT</option>
+            <option value="pdf-to-text">PDF → 文本</option>
+            <option value="pdf-to-images">PDF → 图片</option>
+          </select>
+
+          <label class="label convert-file-label" for="convert-input">选择文件</label>
+          <input type="file" id="convert-input" class="img-file-input" />
+
+          <div id="convert-file-meta" class="img-meta">请选择需要转换的文件</div>
+          <div id="convert-hint" class="img-hint">所有转换都在浏览器本地完成，不会上传到服务器。</div>
+
+          <div id="convert-advanced-options" class="convert-advanced-options hidden">
+            <label id="convert-sheet-wrap" class="img-control hidden">
+              <span>选择工作表</span>
+              <select id="convert-sheet-select" class="ts-select"></select>
+            </label>
+
+            <label id="convert-sheet-mode-wrap" class="img-control hidden">
+              <span>CSV 导出模式</span>
+              <select id="convert-sheet-mode" class="ts-select">
+                <option value="single">当前工作表</option>
+                <option value="all">全部工作表（ZIP）</option>
+              </select>
+            </label>
+
+            <label id="convert-pdf-scale-wrap" class="img-control hidden">
+              <span>PDF 图片清晰度</span>
+              <select id="convert-pdf-scale" class="ts-select">
+                <option value="1">标准（1x）</option>
+                <option value="1.5" selected>清晰（1.5x）</option>
+                <option value="2">高清（2x）</option>
+                <option value="2.5">超清（2.5x）</option>
+              </select>
+            </label>
+
+            <label id="convert-pdf-pages-wrap" class="img-control hidden">
+              <span>导出页码范围</span>
+              <input type="text" id="convert-pdf-pages" class="ts-input img-number-input" placeholder="留空=全部页，例如 1-3,5,8" />
+            </label>
+          </div>
+
+          <div id="convert-dropzone" class="convert-dropzone">也可以将文件拖拽到这里上传</div>
+
+          <div class="btn-row">
+            <button id="convert-run-btn" class="btn primary" type="button" onclick="runFileConversion()">开始转换</button>
+            <button id="convert-download-btn" class="btn outline" type="button" onclick="downloadFileConversionResult()">下载结果</button>
+            <button class="btn red" type="button" onclick="clearFileConversion()">清空</button>
+          </div>
+        </div>
+
+        <div class="convert-card">
+          <label class="label">转换结果预览</label>
+          <div id="convert-result-preview" class="convert-result-preview">转换结果会显示在这里</div>
+          <div id="convert-result-meta" class="img-meta">结果：--</div>
         </div>
       </div>
     </section>
@@ -315,6 +383,9 @@
     </div>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
