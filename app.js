@@ -1138,17 +1138,20 @@ function updateConvertAdvancedOptions() {
   const advanced = document.getElementById('convert-advanced-options');
   const sheetWrap = document.getElementById('convert-sheet-wrap');
   const sheetModeWrap = document.getElementById('convert-sheet-mode-wrap');
+  const csvDelimiterWrap = document.getElementById('convert-csv-delimiter-wrap');
   const pdfScaleWrap = document.getElementById('convert-pdf-scale-wrap');
   const pdfPagesWrap = document.getElementById('convert-pdf-pages-wrap');
   const type = fileConvertState.type;
   const showSheet = type === 'xlsx-to-csv' && fileConvertState.workbookSheetNames.length > 0;
   const showSheetMode = type === 'xlsx-to-csv' && fileConvertState.workbookSheetNames.length > 1;
+  const showCsvDelimiter = type === 'xlsx-to-csv' || type === 'csv-to-xlsx';
   const showPdfScale = type === 'pdf-to-images';
   const showPdfPages = type === 'pdf-to-images';
 
-  if (advanced) advanced.classList.toggle('hidden', !showSheet && !showSheetMode && !showPdfScale && !showPdfPages);
+  if (advanced) advanced.classList.toggle('hidden', !showSheet && !showSheetMode && !showCsvDelimiter && !showPdfScale && !showPdfPages);
   if (sheetWrap) sheetWrap.classList.toggle('hidden', !showSheet);
   if (sheetModeWrap) sheetModeWrap.classList.toggle('hidden', !showSheetMode);
+  if (csvDelimiterWrap) csvDelimiterWrap.classList.toggle('hidden', !showCsvDelimiter);
   if (pdfScaleWrap) pdfScaleWrap.classList.toggle('hidden', !showPdfScale);
   if (pdfPagesWrap) pdfPagesWrap.classList.toggle('hidden', !showPdfPages);
 }
@@ -1296,6 +1299,16 @@ function readFileAsArrayBuffer(file) {
   return file.arrayBuffer();
 }
 
+function getCsvDelimiter() {
+  const select = document.getElementById('convert-csv-delimiter');
+  if (!select) return ',';
+  return select.value === 'tab' ? '	' : select.value;
+}
+
+function parseDelimitedText(text, delimiter) {
+  return text.split(/\r?\n/).filter(line => line.length > 0).map(line => line.split(delimiter));
+}
+
 function parsePdfPageSelection(input, totalPages) {
   if (!input || !input.trim()) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -1354,9 +1367,10 @@ async function runFileConversion() {
       const sheetMode = document.getElementById('convert-sheet-mode');
       const mode = sheetMode ? sheetMode.value : 'single';
       if (mode === 'all' && workbook.SheetNames.length > 1) {
+        const delimiter = getCsvDelimiter();
         const entries = workbook.SheetNames.map(sheetName => ({
           name: `${file.name.replace(/\.[^.]+$/, '')}-${sheetName}.csv`,
-          bytes: new TextEncoder().encode(XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]))
+          bytes: new TextEncoder().encode(XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName], { FS: delimiter }))
         }));
         const zipBlob = createZipBlob(entries);
         fileConvertState.resultBlob = zipBlob;
@@ -1369,7 +1383,7 @@ async function runFileConversion() {
       } else {
         const sheetSelect = document.getElementById('convert-sheet-select');
         const selectedSheet = sheetSelect && sheetSelect.value ? sheetSelect.value : workbook.SheetNames[0];
-        const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[selectedSheet]);
+        const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[selectedSheet], { FS: getCsvDelimiter() });
         setConvertResultText(`${file.name.replace(/\.[^.]+$/, '')}-${selectedSheet}.csv`, csv);
         setConvertMessage(`转换完成：工作表 ${selectedSheet} 已成功转换为 CSV。`);
       }
