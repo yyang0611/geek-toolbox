@@ -10,10 +10,27 @@ const supportConfig = {
   koFiUsername: ''
 };
 
-/* === Tab 切换 === */
-if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+/* === Dynamic Script Loader (lazy-load heavy libs) === */
+const _scriptCache = {};
+function loadScript(url) {
+  if (_scriptCache[url]) return _scriptCache[url];
+  const p = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => { _scriptCache[url] = true; resolve(); };
+    s.onerror = () => { delete _scriptCache[url]; reject(new Error('Failed to load ' + url)); };
+    document.head.appendChild(s);
+  });
+  _scriptCache[url] = p;
+  return p;
 }
+
+const CDN = {
+  XLSX: 'https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js',
+  MAMMOTH: 'https://cdn.jsdelivr.net/npm/mammoth/mammoth.browser.min.js',
+  PDFJS: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+  PDFJS_WORKER: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+};
 
 
 
@@ -1952,6 +1969,7 @@ async function onConvertFileChange(event) {
 
   if (file && fileConvertState.type === 'xlsx-to-csv') {
     try {
+      await loadScript(CDN.XLSX);
       const workbook = XLSX.read(await readFileAsArrayBuffer(file), { type: 'array', bookSheets: true });
       populateWorkbookSheetOptions(workbook.SheetNames || []);
     } catch {
@@ -2076,6 +2094,7 @@ async function runFileConversion() {
     const type = fileConvertState.type;
 
     if (type === 'xlsx-to-csv') {
+      await loadScript(CDN.XLSX);
       const workbook = XLSX.read(await readFileAsArrayBuffer(file), { type: 'array' });
       const sheetMode = document.getElementById('convert-sheet-mode');
       const mode = sheetMode ? sheetMode.value : 'single';
@@ -2103,6 +2122,7 @@ async function runFileConversion() {
         setConvertMessage(t('convert.completedSheetMessage', { sheet: selectedSheet }));
       }
     } else if (type === 'csv-to-xlsx') {
+      await loadScript(CDN.XLSX);
       const csvText = await file.text();
       const worksheet = XLSX.utils.aoa_to_sheet(csvText.split(/\r?\n/).map(line => line.split(getCsvDelimiter())));
       const workbook = XLSX.utils.book_new();
@@ -2114,10 +2134,15 @@ async function runFileConversion() {
       setConvertResultBlob(file.name.replace(/\.[^.]+$/, '') + '.xlsx', blob, t('convert.csvToXlsxPreview'));
       setConvertMessage(t('convert.csvToXlsxMessage'));
     } else if (type === 'docx-to-txt') {
+      await loadScript(CDN.MAMMOTH);
       const result = await mammoth.extractRawText({ arrayBuffer: await readFileAsArrayBuffer(file) });
       setConvertResultText(file.name.replace(/\.[^.]+$/, '') + '.txt', result.value.trim());
       setConvertMessage(t('convert.docxToTxtMessage'));
     } else if (type === 'pdf-to-text') {
+      await loadScript(CDN.PDFJS);
+      if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = CDN.PDFJS_WORKER;
+      }
       const pdf = await pdfjsLib.getDocument({ data: await readFileAsArrayBuffer(file) }).promise;
       const texts = [];
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -2127,6 +2152,10 @@ async function runFileConversion() {
       }
       setConvertResultText(file.name.replace(/\.[^.]+$/, '') + '.txt', texts.join('\n\n'));
     } else if (type === 'pdf-to-images') {
+      await loadScript(CDN.PDFJS);
+      if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = CDN.PDFJS_WORKER;
+      }
       const pdf = await pdfjsLib.getDocument({ data: await readFileAsArrayBuffer(file) }).promise;
       const pageInput = document.getElementById('convert-pdf-pages');
       const selectedPages = parsePdfPageSelection(pageInput ? pageInput.value : '', pdf.numPages);
@@ -2219,8 +2248,9 @@ function onConvertDrop(event) {
   clearFileConversionResult();
   restoreConvertHint(true);
   if (fileConvertState.type === 'xlsx-to-csv') {
-    readFileAsArrayBuffer(file).then(buffer => {
+    readFileAsArrayBuffer(file).then(async (buffer) => {
       try {
+        await loadScript(CDN.XLSX);
         const workbook = XLSX.read(buffer, { type: 'array', bookSheets: true });
         populateWorkbookSheetOptions(workbook.SheetNames || []);
       } catch {
