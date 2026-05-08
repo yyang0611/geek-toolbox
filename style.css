@@ -501,6 +501,182 @@ body {
   display: none !important;
 }
 
+/* === Regex Tester === */
+.regex-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.regex-input-area {
+  min-width: 0;
+}
+.regex-pattern-row {
+  display: flex;
+  gap: 8px;
+}
+.regex-input {
+  flex: 1;
+  font-family: var(--font-mono);
+}
+.regex-flags {
+  width: 90px;
+  flex-shrink: 0;
+}
+.regex-test-input {
+  min-height: 200px;
+}
+.regex-result-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 8px;
+  flex-wrap: wrap;
+}
+.regex-replace-input {
+  flex: 1;
+  min-width: 120px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.regex-output {
+  min-height: 100px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* === JWT Decoder === */
+.jwt-input {
+  min-height: 80px;
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+.jwt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.jwt-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.jwt-code-output {
+  min-height: 120px;
+  max-height: 350px;
+  overflow-y: auto;
+  margin-top: 8px;
+  font-size: 0.78rem;
+}
+.jwt-meta {
+  margin-top: 10px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+/* === YAML Converter === */
+.yaml-code-input {
+  min-height: 300px;
+  font-family: var(--font-mono);
+}
+
+/* === Color Converter === */
+.color-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.6fr) 1fr;
+  gap: 16px;
+}
+.color-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.color-picker-input {
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+}
+.color-picker-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.color-picker-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 8px;
+}
+.color-preview-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+}
+.color-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.color-field-label {
+  width: 40px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+.color-input {
+  flex: 1;
+  font-family: var(--font-mono);
+}
+.color-swatches {
+  margin-top: 16px;
+}
+.color-swatch-label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.color-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  padding: 0;
+}
+.color-swatch:hover {
+  transform: scale(1.15);
+  border-color: var(--primary);
+}
+
+@media (max-width: 700px) {
+  .regex-layout,
+  .jwt-grid,
+  .color-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* === File Convert === */
 .convert-grid {
   display: grid;

@@ -29,7 +29,8 @@ const CDN = {
   XLSX: 'https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js',
   MAMMOTH: 'https://cdn.jsdelivr.net/npm/mammoth/mammoth.browser.min.js',
   PDFJS: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
-  PDFJS_WORKER: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
+  PDFJS_WORKER: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',
+  YAML: 'https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'
 };
 
 
@@ -71,7 +72,11 @@ const translations = {
       diff: '文本对比',
       base64: 'Base64',
       count: '字数统计',
-      url: 'URL 编解码'
+      url: 'URL 编解码',
+      regex: '正则测试',
+      jwt: 'JWT 解码',
+      yaml: 'YAML ↔ JSON',
+      color: '颜色转换'
     },
     json: {
       title: 'JSON 格式化 / 校验',
@@ -113,6 +118,49 @@ const translations = {
       encode: '编码 →',
       decode: '← 解码',
       decodeError: '❌ 无法解码，请检查输入'
+    },
+    regex: {
+      title: '正则测试器',
+      patternLabel: '正则表达式',
+      patternPlaceholder: '/你的正则/',
+      testLabel: '测试文本',
+      testPlaceholder: '输入测试字符串...',
+      matchCount: '匹配：',
+      replaceLabel: '替换为：',
+      replacePlaceholder: '替换文本...',
+      noMatch: '(无匹配)',
+      error: '❌ 正则错误: {message}'
+    },
+    jwt: {
+      title: 'JWT 解码器',
+      placeholder: '粘贴 JWT Token 到这里...',
+      decode: '解码',
+      header: '头部（算法与令牌类型）',
+      payload: '负载（数据）',
+      copyPayload: '复制负载',
+      invalid: '❌ 无效的 JWT 格式，请检查 Token',
+      meta: '算法: {alg} · 类型: {typ}',
+      metaNoPayload: '算法: {alg}',
+      expired: '⚠️ 已过期',
+      expires: '过期时间: {time}',
+      issuedAt: '签发时间: {time}'
+    },
+    yaml: {
+      title: 'YAML ↔ JSON 转换器',
+      inputLabel: '输入',
+      inputPlaceholder: '在此粘贴 YAML 或 JSON...',
+      outputLabel: '输出',
+      toJson: '→ JSON',
+      toYaml: '→ YAML',
+      invalidYaml: '❌ YAML 格式错误: {message}',
+      invalidJson: '❌ JSON 格式错误: {message}',
+      emptyInput: '⚠️ 请输入内容后再转换'
+    },
+    color: {
+      title: '颜色转换器',
+      pickerLabel: '取色',
+      manualLabel: '或输入颜色值',
+      swatchesLabel: '色板'
     },
     timestamp: {
       title: '时间戳转换',
@@ -350,7 +398,11 @@ const translations = {
       diff: 'Text Diff',
       base64: 'Base64',
       count: 'Text Count',
-      url: 'URL Encode/Decode'
+      url: 'URL Encode/Decode',
+      regex: 'Regex Tester',
+      jwt: 'JWT Decoder',
+      yaml: 'YAML ↔ JSON',
+      color: 'Color Converter'
     },
     json: {
       title: 'Format / Validate JSON',
@@ -392,6 +444,49 @@ const translations = {
       encode: 'Encode →',
       decode: '← Decode',
       decodeError: '❌ Unable to decode. Please check the input.'
+    },
+    regex: {
+      title: 'Regex Tester',
+      patternLabel: 'Pattern',
+      patternPlaceholder: '/your-regex/',
+      testLabel: 'Test String',
+      testPlaceholder: 'Enter test string...',
+      matchCount: 'Matches: ',
+      replaceLabel: 'Replace: ',
+      replacePlaceholder: 'Replacement text...',
+      noMatch: '(no match)',
+      error: '❌ Regex error: {message}'
+    },
+    jwt: {
+      title: 'JWT Decoder',
+      placeholder: 'Paste your JWT token here...',
+      decode: 'Decode',
+      header: 'Header (Algorithm & Token Type)',
+      payload: 'Payload (Data)',
+      copyPayload: 'Copy Payload',
+      invalid: '❌ Invalid JWT format. Please check the token.',
+      meta: 'Algorithm: {alg} · Type: {typ}',
+      metaNoPayload: 'Algorithm: {alg}',
+      expired: '⚠️ Expired',
+      expires: 'Expires: {time}',
+      issuedAt: 'Issued: {time}'
+    },
+    yaml: {
+      title: 'YAML ↔ JSON Converter',
+      inputLabel: 'Input',
+      inputPlaceholder: 'Paste YAML or JSON here...',
+      outputLabel: 'Output',
+      toJson: '→ JSON',
+      toYaml: '→ YAML',
+      invalidYaml: '❌ Invalid YAML: {message}',
+      invalidJson: '❌ Invalid JSON: {message}',
+      emptyInput: '⚠️ Please enter content before converting'
+    },
+    color: {
+      title: 'Color Converter',
+      pickerLabel: 'Pick a Color',
+      manualLabel: 'Or Enter Value',
+      swatchesLabel: 'Palette'
     },
     timestamp: {
       title: 'Timestamp Converter',
@@ -3106,6 +3201,291 @@ window.addEventListener('resize', () => {
     drawImageEditor();
   }
 });
+
+applySupportLinks();
+
+/* ===== Regex Tester ===== */
+function runRegexTest() {
+  const patternInput = document.getElementById('regex-pattern');
+  const testInput = document.getElementById('regex-test');
+  const output = document.getElementById('regex-output');
+  const count = document.getElementById('regex-count');
+  const error = document.getElementById('regex-error');
+  const flags = document.getElementById('regex-flags');
+  const replaceInput = document.getElementById('regex-replace');
+  if (!patternInput || !testInput || !output || !count || !error) return;
+
+  const pattern = patternInput.value;
+  const testStr = testInput.value;
+  const flagStr = flags ? flags.value : 'g';
+  const replaceStr = replaceInput ? replaceInput.value : '';
+  error.textContent = '';
+
+  if (!pattern) {
+    output.textContent = '';
+    count.textContent = '0';
+    return;
+  }
+
+  try {
+    const regex = new RegExp(pattern, flagStr);
+    if (replaceStr) {
+      const replaced = testStr.replace(regex, replaceStr);
+      output.textContent = replaced;
+      if (testStr !== replaced) {
+        count.textContent = '✓';
+      } else {
+        count.textContent = '0';
+        if (!output.textContent) output.textContent = t('regex.noMatch');
+      }
+    } else {
+      const matches = testStr.match(regex);
+      if (matches) {
+        output.textContent = matches.map((m, i) => `[${i}] "${m}"`).join('\n');
+        count.textContent = String(matches.length);
+      } else {
+        output.textContent = t('regex.noMatch');
+        count.textContent = '0';
+      }
+    }
+  } catch (e) {
+    error.textContent = t('regex.error', { message: e.message });
+    output.textContent = '';
+    count.textContent = '0';
+  }
+}
+
+function clearRegex() {
+  const el = id => document.getElementById(id);
+  if (el('regex-pattern')) el('regex-pattern').value = '';
+  if (el('regex-test')) el('regex-test').value = '';
+  if (el('regex-replace')) el('regex-replace').value = '';
+  if (el('regex-flags')) el('regex-flags').value = 'gmi';
+  runRegexTest();
+}
+
+/* ===== JWT Decoder ===== */
+function decodeJWT() {
+  const input = document.getElementById('jwt-input');
+  const headerOut = document.getElementById('jwt-header-output');
+  const payloadOut = document.getElementById('jwt-payload-output');
+  const meta = document.getElementById('jwt-meta');
+  if (!input || !headerOut || !payloadOut || !meta) return;
+
+  const token = input.value.trim();
+  if (!token) {
+    headerOut.textContent = '--';
+    payloadOut.textContent = '--';
+    meta.textContent = '';
+    return;
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    headerOut.textContent = t('jwt.invalid');
+    payloadOut.textContent = t('jwt.invalid');
+    meta.textContent = '';
+    return;
+  }
+
+  try {
+    const header = JSON.parse(decodeURIComponent(escape(atob(parts[0]))));
+    const payload = JSON.parse(decodeURIComponent(escape(atob(parts[1]))));
+
+    headerOut.textContent = JSON.stringify(header, null, 2);
+    payloadOut.textContent = JSON.stringify(payload, null, 2);
+
+    const alg = header.alg || '--';
+    const typ = header.typ || '--';
+    if (payload.typ) {
+      meta.textContent = t('jwt.meta', { alg, typ });
+    } else {
+      meta.textContent = t('jwt.metaNoPayload', { alg });
+    }
+
+    const metaParts = [];
+    if (payload.exp) {
+      const expDate = new Date(payload.exp * 1000);
+      const expired = expDate < new Date();
+      metaParts.push((expired ? t('jwt.expired') + ' ' : '') + t('jwt.expires', { time: formatDateTimeByLanguage(expDate) }));
+    }
+    if (payload.iat) {
+      metaParts.push(t('jwt.issuedAt', { time: formatDateTimeByLanguage(new Date(payload.iat * 1000)) }));
+    }
+    if (metaParts.length) {
+      meta.textContent = meta.textContent + ' · ' + metaParts.join(' · ');
+    }
+  } catch (e) {
+    headerOut.textContent = t('jwt.invalid');
+    payloadOut.textContent = t('jwt.invalid');
+    meta.textContent = '';
+  }
+}
+
+function clearJWT() {
+  const input = document.getElementById('jwt-input');
+  if (input) input.value = '';
+  decodeJWT();
+}
+
+/* ===== YAML ↔ JSON ===== */
+async function yamlToJson() {
+  const input = document.getElementById('yaml-input');
+  const output = document.getElementById('yaml-output');
+  const error = document.getElementById('yaml-error');
+  if (!input || !output || !error) return;
+
+  const text = input.value.trim();
+  if (!text) {
+    error.textContent = t('yaml.emptyInput');
+    output.textContent = '';
+    return;
+  }
+  error.textContent = '';
+
+  try {
+    await loadScript(CDN.YAML);
+    const obj = jsyaml.load(text);
+    if (typeof obj === 'string') {
+      output.textContent = obj;
+    } else if (obj === null || obj === undefined) {
+      output.textContent = 'null';
+    } else {
+      output.textContent = JSON.stringify(obj, null, 2);
+    }
+  } catch (e) {
+    error.textContent = t('yaml.invalidYaml', { message: e.message });
+    output.textContent = '';
+  }
+}
+
+async function jsonToYaml() {
+  const input = document.getElementById('yaml-input');
+  const output = document.getElementById('yaml-output');
+  const error = document.getElementById('yaml-error');
+  if (!input || !output || !error) return;
+
+  const text = input.value.trim();
+  if (!text) {
+    error.textContent = t('yaml.emptyInput');
+    output.textContent = '';
+    return;
+  }
+  error.textContent = '';
+
+  try {
+    const obj = JSON.parse(text);
+    await loadScript(CDN.YAML);
+    output.textContent = jsyaml.dump(obj, { indent: 2, lineWidth: 120 });
+  } catch (e) {
+    error.textContent = t('yaml.invalidJson', { message: e.message });
+    output.textContent = '';
+  }
+}
+
+function clearYaml() {
+  const input = document.getElementById('yaml-input');
+  const output = document.getElementById('yaml-output');
+  const error = document.getElementById('yaml-error');
+  if (input) input.value = '';
+  if (output) output.textContent = '';
+  if (error) error.textContent = '';
+}
+
+/* ===== Color Converter ===== */
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToRgb(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color);
+  };
+  return { r: f(0), g: f(8), b: f(4) };
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+}
+
+function updateAllColor(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return;
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+  const hexInput = document.getElementById('color-hex');
+  const rgbInput = document.getElementById('color-rgb');
+  const hslInput = document.getElementById('color-hsl');
+  const picker = document.getElementById('color-picker');
+  const preview = document.getElementById('color-preview-large');
+
+  if (hexInput) hexInput.value = hex.toLowerCase();
+  if (rgbInput) rgbInput.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+  if (hslInput) hslInput.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+  if (picker) picker.value = hex.substring(0, 7);
+  if (preview) preview.style.background = hex;
+}
+
+function onColorPickerChange() {
+  const picker = document.getElementById('color-picker');
+  if (picker) updateAllColor(picker.value);
+}
+
+function onColorHexInput() {
+  const input = document.getElementById('color-hex');
+  if (!input) return;
+  let val = input.value.trim();
+  if (!val.startsWith('#')) val = '#' + val;
+  if (/^#[0-9a-f]{6}$/i.test(val)) updateAllColor(val);
+}
+
+function onColorRgbInput() {
+  const input = document.getElementById('color-rgb');
+  if (!input) return;
+  const match = input.value.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+  if (match) {
+    const hex = rgbToHex(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
+    updateAllColor(hex);
+  }
+}
+
+function onColorHslInput() {
+  const input = document.getElementById('color-hsl');
+  if (!input) return;
+  const match = input.value.match(/hsl\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
+  if (match) {
+    const rgb = hslToRgb(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
+    const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+    updateAllColor(hex);
+  }
+}
+
+function applyColorSwatch(hex) {
+  updateAllColor(hex);
+}
 
 applyI18n();
 onImageQualityChange();

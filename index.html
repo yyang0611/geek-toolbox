@@ -32,6 +32,10 @@
     <button class="tab" data-tool="base64" data-i18n="tabs.base64">Base64</button>
     <button class="tab" data-tool="count" data-i18n="tabs.count">Text Count</button>
     <button class="tab" data-tool="url" data-i18n="tabs.url">URL Encode/Decode</button>
+    <button class="tab" data-tool="regex" data-i18n="tabs.regex">Regex Tester</button>
+    <button class="tab" data-tool="jwt" data-i18n="tabs.jwt">JWT Decoder</button>
+    <button class="tab" data-tool="yaml" data-i18n="tabs.yaml">YAML ↔ JSON</button>
+    <button class="tab" data-tool="color" data-i18n="tabs.color">Color Converter</button>
   </nav>
 
   <main class="container">
@@ -103,6 +107,128 @@
         <button class="btn outline" onclick="copyOutput('url-output')" data-i18n="common.copyResult">Copy Result</button>
       </div>
       <pre id="url-output" class="code-output"></pre>
+    </section>
+
+    <section id="tool-regex" class="tool-panel">
+      <h2 data-i18n="regex.title">Regex Tester</h2>
+      <div class="regex-layout">
+        <div class="regex-input-area">
+          <label class="label" data-i18n="regex.patternLabel">Pattern</label>
+          <div class="regex-pattern-row">
+            <input type="text" id="regex-pattern" class="ts-input regex-input" data-i18n-placeholder="regex.patternPlaceholder" placeholder="/your-regex/" spellcheck="false" oninput="runRegexTest()" />
+            <select id="regex-flags" class="ts-select regex-flags" onchange="runRegexTest()">
+              <option value="gmi">gmi</option>
+              <option value="gm">gm</option>
+              <option value="gi">gi</option>
+              <option value="g">g</option>
+              <option value="mi">mi</option>
+              <option value="m">m</option>
+              <option value="i">i</option>
+              <option value="">(none)</option>
+            </select>
+          </div>
+          <div id="regex-error" class="error-msg"></div>
+        </div>
+        <div class="regex-input-area">
+          <label class="label" data-i18n="regex.testLabel">Test String</label>
+          <textarea id="regex-test" class="code-input regex-test-input" data-i18n-placeholder="regex.testPlaceholder" placeholder="Enter test string..." spellcheck="false" oninput="runRegexTest()"></textarea>
+        </div>
+      </div>
+      <div class="regex-result-header">
+        <span data-i18n="regex.matchCount">Matches: </span><strong id="regex-count">0</strong>
+        &nbsp;·&nbsp; <span data-i18n="regex.replaceLabel">Replace: </span>
+        <input type="text" id="regex-replace" class="ts-input regex-replace-input" data-i18n-placeholder="regex.replacePlaceholder" placeholder="Replacement text..." oninput="runRegexTest()" />
+        <button class="btn outline small" onclick="clearRegex()" data-i18n="common.clear" style="margin-left:auto">Clear</button>
+      </div>
+      <pre id="regex-output" class="code-output regex-output"></pre>
+    </section>
+
+    <section id="tool-jwt" class="tool-panel">
+      <h2 data-i18n="jwt.title">JWT Decoder</h2>
+      <textarea id="jwt-input" class="code-input jwt-input" data-i18n-placeholder="jwt.placeholder" placeholder="Paste your JWT token here..." spellcheck="false" oninput="decodeJWT()"></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="decodeJWT()" data-i18n="jwt.decode">Decode</button>
+        <button class="btn red" onclick="clearJWT()" data-i18n="common.clear">Clear</button>
+        <button class="btn outline" onclick="copyOutput('jwt-header-output')" data-i18n="common.copyResult">Copy Header</button>
+        <button class="btn outline" onclick="copyOutput('jwt-payload-output')" data-i18n="jwt.copyPayload">Copy Payload</button>
+      </div>
+      <div class="jwt-grid">
+        <div class="jwt-card">
+          <label class="label" data-i18n="jwt.header">Header (Algorithm & Token Type)</label>
+          <pre id="jwt-header-output" class="code-output jwt-code-output">--</pre>
+        </div>
+        <div class="jwt-card">
+          <label class="label" data-i18n="jwt.payload">Payload (Data)</label>
+          <pre id="jwt-payload-output" class="code-output jwt-code-output">--</pre>
+        </div>
+      </div>
+      <div class="jwt-meta" id="jwt-meta"></div>
+    </section>
+
+    <section id="tool-yaml" class="tool-panel">
+      <h2 data-i18n="yaml.title">YAML ↔ JSON Converter</h2>
+      <div class="convert-grid">
+        <div class="convert-card">
+          <label class="label" data-i18n="yaml.inputLabel">Input</label>
+          <textarea id="yaml-input" class="code-input yaml-code-input" data-i18n-placeholder="yaml.inputPlaceholder" placeholder="Paste YAML or JSON here..." spellcheck="false"></textarea>
+          <div class="btn-row">
+            <button class="btn primary" onclick="yamlToJson()" data-i18n="yaml.toJson">→ JSON</button>
+            <button class="btn" onclick="jsonToYaml()" data-i18n="yaml.toYaml">→ YAML</button>
+            <button class="btn red" onclick="clearYaml()" data-i18n="common.clear">Clear</button>
+            <button class="btn outline" onclick="copyOutput('yaml-output')" data-i18n="common.copyResult">Copy Result</button>
+          </div>
+        </div>
+        <div class="convert-card">
+          <label class="label" data-i18n="yaml.outputLabel">Output</label>
+          <pre id="yaml-output" class="code-output" style="min-height:300px"></pre>
+          <div id="yaml-error" class="error-msg"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-color" class="tool-panel">
+      <h2 data-i18n="color.title">Color Converter</h2>
+      <div class="color-grid">
+        <div class="color-card">
+          <label class="label" data-i18n="color.pickerLabel">Pick a Color</label>
+          <div class="color-picker-row">
+            <input type="color" id="color-picker" class="color-picker-input" value="#6c63ff" oninput="onColorPickerChange()" />
+            <div class="color-preview-large" id="color-preview-large" style="background:#6c63ff"></div>
+          </div>
+        </div>
+        <div class="color-card">
+          <label class="label" data-i18n="color.manualLabel">Or Enter Value</label>
+          <div class="color-input-group">
+            <label class="color-field">
+              <span class="color-field-label">HEX</span>
+              <input type="text" id="color-hex" class="ts-input color-input" value="#6c63ff" oninput="onColorHexInput()" spellcheck="false" />
+            </label>
+            <label class="color-field">
+              <span class="color-field-label">RGB</span>
+              <input type="text" id="color-rgb" class="ts-input color-input" value="rgb(108, 99, 255)" oninput="onColorRgbInput()" spellcheck="false" />
+            </label>
+            <label class="color-field">
+              <span class="color-field-label">HSL</span>
+              <input type="text" id="color-hsl" class="ts-input color-input" value="hsl(244, 100%, 69%)" oninput="onColorHslInput()" spellcheck="false" />
+            </label>
+          </div>
+          <div class="color-swatches">
+            <span class="color-swatch-label" data-i18n="color.swatchesLabel">Palette</span>
+            <div class="color-swatch-row">
+              <button class="color-swatch" style="background:#ff4757" onclick="applyColorSwatch('#ff4757')"></button>
+              <button class="color-swatch" style="background:#ff6348" onclick="applyColorSwatch('#ff6348')"></button>
+              <button class="color-swatch" style="background:#ffa502" onclick="applyColorSwatch('#ffa502')"></button>
+              <button class="color-swatch" style="background:#2ed573" onclick="applyColorSwatch('#2ed573')"></button>
+              <button class="color-swatch" style="background:#1e90ff" onclick="applyColorSwatch('#1e90ff')"></button>
+              <button class="color-swatch" style="background:#6c63ff" onclick="applyColorSwatch('#6c63ff')"></button>
+              <button class="color-swatch" style="background:#a29bfe" onclick="applyColorSwatch('#a29bfe')"></button>
+              <button class="color-swatch" style="background:#fd79a8" onclick="applyColorSwatch('#fd79a8')"></button>
+              <button class="color-swatch" style="background:#2d3436" onclick="applyColorSwatch('#2d3436')"></button>
+              <button class="color-swatch" style="background:#ffffff" onclick="applyColorSwatch('#ffffff')"></button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="tool-timestamp" class="tool-panel active">
