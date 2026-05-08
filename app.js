@@ -125,11 +125,13 @@ const translations = {
       patternPlaceholder: '/你的正则/',
       testLabel: '测试文本',
       testPlaceholder: '输入测试字符串...',
-      matchCount: '匹配：',
+      matchCount: '匹配',
       replaceLabel: '替换为：',
       replacePlaceholder: '替换文本...',
       noMatch: '(无匹配)',
-      error: '❌ 正则错误: {message}'
+      error: '❌ 正则错误: {message}',
+      modeMatch: '匹配',
+      modeReplace: '替换'
     },
     jwt: {
       title: 'JWT 解码器',
@@ -451,11 +453,13 @@ const translations = {
       patternPlaceholder: '/your-regex/',
       testLabel: 'Test String',
       testPlaceholder: 'Enter test string...',
-      matchCount: 'Matches: ',
+      matchCount: 'matches',
       replaceLabel: 'Replace: ',
       replacePlaceholder: 'Replacement text...',
       noMatch: '(no match)',
-      error: '❌ Regex error: {message}'
+      error: '❌ Regex error: {message}',
+      modeMatch: 'Match',
+      modeReplace: 'Replace'
     },
     jwt: {
       title: 'JWT Decoder',
@@ -3205,11 +3209,25 @@ window.addEventListener('resize', () => {
 applySupportLinks();
 
 /* ===== Regex Tester ===== */
+let _regexMode = 'match';
+
+function setRegexMode(mode) {
+  _regexMode = mode;
+  const matchBtn = document.getElementById('regex-mode-match');
+  const replaceBtn = document.getElementById('regex-mode-replace');
+  const replaceWrap = document.getElementById('regex-replace-wrap');
+  if (matchBtn) matchBtn.classList.toggle('active', mode === 'match');
+  if (replaceBtn) replaceBtn.classList.toggle('active', mode === 'replace');
+  if (replaceWrap) replaceWrap.classList.toggle('hidden', mode !== 'replace');
+  runRegexTest();
+}
+
 function runRegexTest() {
   const patternInput = document.getElementById('regex-pattern');
   const testInput = document.getElementById('regex-test');
   const output = document.getElementById('regex-output');
   const count = document.getElementById('regex-count');
+  const badge = document.getElementById('regex-badge');
   const error = document.getElementById('regex-error');
   const flags = document.getElementById('regex-flags');
   const replaceInput = document.getElementById('regex-replace');
@@ -3220,39 +3238,78 @@ function runRegexTest() {
   const flagStr = flags ? flags.value : 'g';
   const replaceStr = replaceInput ? replaceInput.value : '';
   error.textContent = '';
+  if (badge) badge.classList.remove('has-matches', 'has-error');
 
   if (!pattern) {
-    output.textContent = '';
+    output.innerHTML = '';
     count.textContent = '0';
     return;
   }
 
   try {
     const regex = new RegExp(pattern, flagStr);
-    if (replaceStr) {
+
+    if (_regexMode === 'replace') {
       const replaced = testStr.replace(regex, replaceStr);
-      output.textContent = replaced;
       if (testStr !== replaced) {
+        output.innerHTML = `<span class="replaced-text">${escapeHtml(replaced)}</span>`;
         count.textContent = '✓';
+        if (badge) badge.classList.add('has-matches');
       } else {
+        output.innerHTML = `<span class="replaced-text">${escapeHtml(testStr)}</span>` +
+          '<br><span class="no-match" style="color:var(--text-dim);font-size:0.85em">' + t('regex.noMatch') + '</span>';
         count.textContent = '0';
-        if (!output.textContent) output.textContent = t('regex.noMatch');
       }
     } else {
       const matches = testStr.match(regex);
-      if (matches) {
-        output.textContent = matches.map((m, i) => `[${i}] "${m}"`).join('\n');
+      if (matches && matches.length) {
+        const hasGroups = matches.length > 1 && matches[0] !== matches.input;
+        if (hasGroups) {
+          // If regex has groups, show group details
+          let html = '';
+          let idx = 0;
+          let match;
+          while ((match = regex.exec(testStr)) !== null) {
+            const full = match[0];
+            const groups = match.slice(1);
+            html += `<span class="match-item"><span class="match-index">#${idx}</span>`;
+            html += `<span class="match-text">"${escapeHtml(full)}"</span>`;
+            if (groups.length) {
+              html += groups.map((g, gi) => g !== undefined
+                ? ` <span class="match-group" style="color:var(--text-dim);font-size:0.85em">group ${gi+1}: "${escapeHtml(g)}"</span>`
+                : '').join('');
+            }
+            html += '</span>';
+            idx++;
+            if (regex.lastIndex === match.index) regex.lastIndex++;
+            if (idx > 200) break;
+          }
+          output.innerHTML = html;
+        } else {
+          // Simple matches list
+          output.innerHTML = matches.map((m, i) =>
+            `<span class="match-item"><span class="match-index">#${i}</span><span class="match-text">"${escapeHtml(m)}"</span></span>`
+          ).join('');
+        }
         count.textContent = String(matches.length);
+        if (badge) badge.classList.add('has-matches');
       } else {
-        output.textContent = t('regex.noMatch');
+        output.innerHTML = `<span style="color:var(--text-dim)">${t('regex.noMatch')}</span>`;
         count.textContent = '0';
       }
     }
   } catch (e) {
     error.textContent = t('regex.error', { message: e.message });
-    output.textContent = '';
+    if (badge) badge.classList.add('has-error');
+    output.innerHTML = '';
     count.textContent = '0';
   }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 function clearRegex() {
@@ -3261,6 +3318,8 @@ function clearRegex() {
   if (el('regex-test')) el('regex-test').value = '';
   if (el('regex-replace')) el('regex-replace').value = '';
   if (el('regex-flags')) el('regex-flags').value = 'gmi';
+  _regexMode = 'match';
+  setRegexMode('match');
   runRegexTest();
 }
 

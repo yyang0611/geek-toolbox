@@ -111,36 +111,53 @@
 
     <section id="tool-regex" class="tool-panel">
       <h2 data-i18n="regex.title">Regex Tester</h2>
-      <div class="regex-layout">
-        <div class="regex-input-area">
-          <label class="label" data-i18n="regex.patternLabel">Pattern</label>
-          <div class="regex-pattern-row">
-            <input type="text" id="regex-pattern" class="ts-input regex-input" data-i18n-placeholder="regex.patternPlaceholder" placeholder="/your-regex/" spellcheck="false" oninput="runRegexTest()" />
-            <select id="regex-flags" class="ts-select regex-flags" onchange="runRegexTest()">
-              <option value="gmi">gmi</option>
-              <option value="gm">gm</option>
-              <option value="gi">gi</option>
-              <option value="g">g</option>
-              <option value="mi">mi</option>
-              <option value="m">m</option>
-              <option value="i">i</option>
-              <option value="">(none)</option>
-            </select>
-          </div>
-          <div id="regex-error" class="error-msg"></div>
+      <div class="regex-pattern-section">
+        <div class="regex-pattern-row">
+          <span class="regex-delimiter">/</span>
+          <input type="text" id="regex-pattern" class="ts-input regex-input" data-i18n-placeholder="regex.patternPlaceholder" placeholder="your-regex" spellcheck="false" oninput="runRegexTest()" />
+          <span class="regex-delimiter">/</span>
+          <select id="regex-flags" class="ts-select regex-flags" onchange="runRegexTest()">
+            <option value="gmi">gmi</option>
+            <option value="gm">gm</option>
+            <option value="gi">gi</option>
+            <option value="g">g</option>
+            <option value="mi">mi</option>
+            <option value="m">m</option>
+            <option value="i">i</option>
+            <option value="">(none)</option>
+          </select>
+          <button class="btn outline small" onclick="clearRegex()" data-i18n="common.clear" title="Clear">✕</button>
         </div>
-        <div class="regex-input-area">
-          <label class="label" data-i18n="regex.testLabel">Test String</label>
+        <div id="regex-error" class="regex-error"></div>
+      </div>
+
+      <div class="regex-body">
+        <div class="regex-section">
+          <div class="regex-section-header">
+            <label class="label" data-i18n="regex.testLabel">Test String</label>
+            <span class="regex-badge" id="regex-badge">
+              <span id="regex-count">0</span> <span data-i18n="regex.matchCount">matches</span>
+            </span>
+          </div>
           <textarea id="regex-test" class="code-input regex-test-input" data-i18n-placeholder="regex.testPlaceholder" placeholder="Enter test string..." spellcheck="false" oninput="runRegexTest()"></textarea>
         </div>
+
+        <div class="regex-section">
+          <div class="regex-section-header">
+            <label class="label" data-i18n="regex.replaceLabel">Replace</label>
+            <div class="regex-mode-toggle">
+              <button id="regex-mode-match" class="regex-mode-btn active" onclick="setRegexMode('match')" data-i18n="regex.modeMatch">Match</button>
+              <button id="regex-mode-replace" class="regex-mode-btn" onclick="setRegexMode('replace')" data-i18n="regex.modeReplace">Replace</button>
+            </div>
+          </div>
+          <div id="regex-replace-wrap" class="regex-replace-wrap hidden">
+            <input type="text" id="regex-replace" class="ts-input regex-replace-input" data-i18n-placeholder="regex.replacePlaceholder" placeholder="Replacement text..." oninput="runRegexTest()" />
+          </div>
+          <div class="regex-output-wrap" id="regex-output-wrap">
+            <pre id="regex-output" class="code-output regex-output"></pre>
+          </div>
+        </div>
       </div>
-      <div class="regex-result-header">
-        <span data-i18n="regex.matchCount">Matches: </span><strong id="regex-count">0</strong>
-        &nbsp;·&nbsp; <span data-i18n="regex.replaceLabel">Replace: </span>
-        <input type="text" id="regex-replace" class="ts-input regex-replace-input" data-i18n-placeholder="regex.replacePlaceholder" placeholder="Replacement text..." oninput="runRegexTest()" />
-        <button class="btn outline small" onclick="clearRegex()" data-i18n="common.clear" style="margin-left:auto">Clear</button>
-      </div>
-      <pre id="regex-output" class="code-output regex-output"></pre>
     </section>
 
     <section id="tool-jwt" class="tool-panel">
