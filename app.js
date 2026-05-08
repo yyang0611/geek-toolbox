@@ -3,7 +3,7 @@ const supportConfig = {
   // 国内/通用联系方式
   contact: 'yyang0611',
   // 只填用户名，不要填完整 URL，例如 your-paypalme-name
-  paypalUsername: '',
+  paypalUsername: 'GeekToolbox',
   // 只填用户名，不要填完整 URL，例如 your-bmac-name
   buyMeACoffeeUsername: '',
   // 只填用户名，不要填完整 URL，例如 your-kofi-name
@@ -13,6 +13,695 @@ const supportConfig = {
 /* === Tab 切换 === */
 if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+}
+
+const LOCALE_STORAGE_KEY = 'geek-toolbox-language';
+const SUPPORTED_LANGUAGES = ['zh-CN', 'en'];
+const LANGUAGE_FALLBACKS = {
+  'zh-CN': 'en',
+  en: 'zh-CN'
+};
+
+const translations = {
+  'zh-CN': {
+    meta: {
+      title: '极客工具箱 · Geek Toolbox'
+    },
+    common: {
+      clear: '清空',
+      copyResult: '复制结果',
+      copyText: '复制文本',
+      cancel: '取消',
+      confirm: '确定',
+      copied: '✅ 已复制',
+      resultEmpty: '结果：--',
+      notSet: '未设置'
+    },
+    header: {
+      logo: '⚡ 极客工具箱',
+      subtitle: '在线开发工具 · 浏览器本地运行，你的数据不上传',
+      languageSwitcherLabel: '语言切换',
+      languageZh: '中文',
+      languageEn: 'EN'
+    },
+    tabs: {
+      timestamp: '时间戳',
+      image: '图片压缩',
+      convert: '文件转换',
+      json: 'JSON 格式化',
+      diff: '文本对比',
+      base64: 'Base64',
+      count: '字数统计',
+      url: 'URL 编解码'
+    },
+    json: {
+      title: 'JSON 格式化 / 校验',
+      placeholder: '粘贴 JSON 到这里...',
+      format: '格式化',
+      compress: '压缩',
+      invalidError: '❌ JSON 格式错误: {message}'
+    },
+    diff: {
+      title: '文本对比',
+      leftLabel: '原文',
+      leftPlaceholder: '原始文本...',
+      rightLabel: '修改后',
+      rightPlaceholder: '修改后的文本...',
+      compare: '对比',
+      emptyState: '请在两侧输入文本后对比'
+    },
+    base64: {
+      title: 'Base64 编解码',
+      placeholder: '输入要编解码的文本...',
+      encode: '编码 →',
+      decode: '← 解码'
+    },
+    count: {
+      title: '字数统计与分析',
+      placeholder: '输入文本，实时统计...',
+      stats: {
+        chars: '总字符',
+        chinese: '中文字',
+        english: '英文单词',
+        lines: '行数',
+        spaces: '空格',
+        punct: '标点'
+      }
+    },
+    url: {
+      title: 'URL 编解码',
+      placeholder: '输入 URL 或字符串...',
+      encode: '编码 →',
+      decode: '← 解码',
+      decodeError: '❌ 无法解码，请检查输入'
+    },
+    timestamp: {
+      title: '时间戳转换',
+      unitLabel: '时间戳单位',
+      radiogroupLabel: '时间戳单位选择',
+      livePanelLabel: '当前时间实时状态',
+      currentTimestampLabel: '当前时间戳',
+      currentTimeLabel: '当前时间',
+      copyCurrentTimestamp: '点击复制当前时间戳',
+      copyCurrentTime: '点击复制当前时间',
+      dateToTimestampLabel: '时间 → 时间戳',
+      timestampToDateLabel: '时间戳 → 时间',
+      datetimePlaceholder: '选择日期和时间',
+      inputPlaceholderSeconds: '输入时间戳（秒）',
+      inputPlaceholderMilliseconds: '输入时间戳（毫秒）',
+      selectTime: '选择时间',
+      copyResult: '点击复制结果',
+      prevMonth: '上一月',
+      nextMonth: '下一月',
+      quick: {
+        now: '此刻',
+        today: '今天',
+        yesterday: '昨天',
+        tomorrow: '明天',
+        weekStart: '本周一',
+        monthStart: '本月1号'
+      },
+      weekdays: {
+        mon: '一',
+        tue: '二',
+        wed: '三',
+        thu: '四',
+        fri: '五',
+        sat: '六',
+        sun: '日'
+      },
+      hour: '时',
+      minute: '分',
+      second: '秒',
+      pickerEmpty: '未选择日期时间',
+      currentTimestampPlaceholder: '请输入时间戳',
+      invalidNumber: '❌ 无效数字',
+      invalidTimestamp: '❌ 无效时间戳',
+      chooseTime: '请选择时间',
+      detectAutoMilliseconds: '已自动识别为毫秒（13 位）',
+      detectAutoSeconds: '已自动识别为秒（10 位）',
+      detectByCurrentUnit: '按当前选择的“{unit}”解析',
+      units: {
+        seconds: '秒',
+        milliseconds: '毫秒'
+      },
+      monthTitle: '{year} 年 {month} 月'
+    },
+    image: {
+      title: '图片压缩 / 自定义裁剪',
+      uploadLabel: '上传图片',
+      sourceMetaIdle: '请选择图片后开始编辑',
+      batchMetaIdle: '支持点击、拖拽、批量上传图片',
+      queueEmpty: '暂无图片。上传后可逐张切换，并为单张图片单独调整裁剪。',
+      canvasAriaLabel: '图片裁剪编辑区域',
+      emptyState: '拖拽图片到这里，或点击上方按钮选择文件。上传后默认按同一裁剪规则处理全部图片。',
+      help: '默认所有图片共用同一裁剪规则。你也可以切换到某张图片并勾选“当前图片单独裁剪”。',
+      resetCrop: '重置当前裁剪',
+      clearAll: '清空全部',
+      exportSettings: '导出设置',
+      formatLabel: '输出格式',
+      qualityLabel: '压缩质量',
+      widthLabel: '输出宽度',
+      widthPlaceholder: '默认按裁剪区宽度',
+      heightLabel: '输出高度',
+      heightPlaceholder: '默认按裁剪区高度',
+      customCropToggle: '当前图片单独裁剪',
+      cropMetaEmpty: '裁剪区：--',
+      cropMeta: '裁剪区：{width} × {height} · 起点 {x}, {y}',
+      exportSummaryIdle: '裁剪后可压缩导出，并在下方预览结果。',
+      exportSummaryBatching: '正在处理 {count} 张图片并打包 ZIP，请稍候...',
+      exportSummaryGenerating: '正在生成当前图片预览，请稍候...',
+      exportSummaryReady: '导出：{format} · {width} × {height} · {mode}',
+      exportModeBatch: '支持批量导出',
+      exportModeSingle: '单张导出',
+      generateButton: '生成当前预览',
+      generatingButton: '生成中...',
+      downloadCurrentButton: '下载当前',
+      downloadAllButton: '批量导出全部',
+      downloadingAllButton: '正在打包 ZIP...',
+      resultPreviewAlt: '压缩结果预览',
+      resultEmpty: '生成后会在这里显示预览',
+      resultMetaCurrent: '结果：{width} × {height} · {size} · {format} · 当前图片',
+      sourceMeta: '当前：{name} · {width} × {height} · {size}',
+      batchMetaLoaded: '已加载 {count} 张图片 · 默认共用裁剪规则，可切换到单张图片单独处理',
+      queueBadgeCustom: '单独',
+      queueBadgeShared: '共用',
+      removeImageAria: '删除 {name}',
+      removeConfirm: `确认删除这张图片吗？\n\n{name}`,
+      generateFailedNoBlob: '生成失败：浏览器未能产出图片数据，请重试。',
+      generateSuccess: '当前图片预览已生成，可直接下载或继续批量导出。',
+      generateFailedGeneric: '生成失败：处理当前图片时出现错误。',
+      downloadFailedNoResult: '下载失败：当前还没有可下载的结果，请先生成预览。',
+      downloadSuccess: '已导出当前图片：{name}',
+      zipFailedNoEntries: '打包失败：没有可导出的图片结果。',
+      zipSuccess: 'ZIP 打包完成：已导出 {count} 个文件',
+      zipFailedGeneric: '打包失败：批量导出过程中出现错误。'
+    },
+    convert: {
+      title: '文件转换',
+      typeLabel: '选择转换类型',
+      fileLabel: '选择文件',
+      fileMetaIdle: '请选择需要转换的文件',
+      defaultHint: '所有转换都在浏览器本地完成，不会上传到服务器。',
+      previewLabel: '转换结果预览',
+      resultPlaceholder: '转换结果会显示在这里',
+      runButton: '开始转换',
+      runningButton: '转换中...',
+      downloadButton: '下载结果',
+      fileMetaCurrent: '当前文件：{name} · {size}',
+      resultTextEmpty: '转换完成，但结果为空',
+      resultMeta: '结果：{name} · {size}',
+      resultMetaImages: '结果：共 {count} 页图片，可打包下载',
+      resultFailure: '结果：转换失败',
+      converting: '正在转换，请稍候...',
+      completedZipPreview: '已生成 {count} 个工作表 CSV，并打包为 ZIP。',
+      completedZipMessage: '转换完成：{count} 个工作表已导出为 CSV ZIP。',
+      completedSheetMessage: '转换完成：工作表 {sheet} 已成功转换为 CSV。',
+      csvToXlsxPreview: 'CSV 已转换为 XLSX，可点击下载结果。',
+      csvToXlsxMessage: '转换完成：CSV 已成功转换为 XLSX。',
+      docxToTxtMessage: '转换完成：DOCX 已提取为 TXT。',
+      pdfImagesMessage: '转换完成：已生成 {count} 页图片预览。',
+      failed: '转换失败：{message}',
+      unknownError: '未知错误',
+      preparingImageZip: '正在准备 {count} 张图片的 ZIP 下载...',
+      downloadedImageZip: '下载完成：PDF 页面图片 ZIP 已导出。',
+      downloadFailedNoResult: '下载失败：当前没有可下载的转换结果。',
+      downloadedFile: '下载完成：{name}',
+      imagePageLabel: '第 {page} 页',
+      imageAlt: '第 {page} 页预览',
+      pdfTextPageHeader: '--- 第 {page} 页 ---',
+      invalidPage: '页码超出范围：{page}',
+      invalidPageRange: '页码范围超出限制：{range}',
+      invalidPageInput: '无法识别的页码范围：{range}',
+      types: {
+        xlsxToCsv: 'XLSX → CSV',
+        csvToXlsx: 'CSV → XLSX',
+        docxToTxt: 'DOCX → TXT',
+        pdfToText: 'PDF → 文本',
+        pdfToImages: 'PDF → 图片'
+      },
+      typeHints: {
+        'xlsx-to-csv': '上传 Excel 文件，转换为 CSV 文本。',
+        'csv-to-xlsx': '上传 CSV 文件，转换为 XLSX 表格。',
+        'docx-to-txt': '上传 Word 文档，提取为纯文本 TXT。',
+        'pdf-to-text': '上传 PDF 文件，提取文本内容。',
+        'pdf-to-images': '上传 PDF 文件，将每页渲染为图片。'
+      },
+      dropzone: '也可以将文件拖拽到这里上传',
+      sheetSelectLabel: '选择工作表',
+      sheetModeLabel: 'CSV 导出模式',
+      sheetMode: {
+        single: '当前工作表',
+        all: '全部工作表（ZIP）'
+      },
+      csvDelimiterLabel: 'CSV 分隔符',
+      delimiters: {
+        comma: '逗号 ,',
+        semicolon: '分号 ;',
+        tab: '制表符 Tab'
+      },
+      pdfScaleLabel: 'PDF 图片清晰度',
+      pdfScales: {
+        standard: '标准（1x）',
+        clear: '清晰（1.5x）',
+        hd: '高清（2x）',
+        ultra: '超清（2.5x）'
+      },
+      pdfPagesLabel: '导出页码范围',
+      pdfPagesPlaceholder: '留空=全部页，例如 1-3,5,8'
+    },
+    support: {
+      footerNotice: '📌 所有处理在浏览器本地完成 · 数据不会上传到服务器 · 纯前端工具',
+      footerPrompt: '如果你觉得有用，',
+      footerLink: '请我喝杯咖啡 ☕',
+      modalTitle: '❤️ 感谢支持！',
+      tabsAriaLabel: '打赏方式',
+      cnTab: '国内',
+      intlTab: 'International',
+      cnQrText: '支付宝扫码打赏',
+      qrAlt: '打赏二维码',
+      contactLabel: '也可以联系作者：',
+      copyContact: '复制联系方式',
+      copiedContact: '已复制',
+      intlHint: '如果对方没有支付宝，建议使用下面的国际打赏方式：',
+      intlSetupHint: '把上面三个渠道配置成你自己的用户名后，就能直接对外使用。',
+      paypalConfigured: 'PayPal 支持',
+      paypalPending: 'PayPal（待配置）',
+      paypalMissingText: '未配置 PayPal 用户名',
+      bmacPending: 'Buy Me a Coffee（待配置）',
+      bmacMissingText: '未配置 Buy Me a Coffee 用户名',
+      kofiPending: 'Ko-fi（待配置）',
+      kofiMissingText: '未配置 Ko-fi 用户名'
+    }
+  },
+  en: {
+    meta: {
+      title: 'Geek Toolbox'
+    },
+    common: {
+      clear: 'Clear',
+      copyResult: 'Copy Result',
+      copyText: 'Copy Text',
+      cancel: 'Cancel',
+      confirm: 'Confirm',
+      copied: '✅ Copied',
+      resultEmpty: 'Result: --',
+      notSet: 'Not set'
+    },
+    header: {
+      logo: '⚡ Geek Toolbox',
+      subtitle: 'Local-first developer tools running in your browser',
+      languageSwitcherLabel: 'Language switcher',
+      languageZh: '中文',
+      languageEn: 'EN'
+    },
+    tabs: {
+      timestamp: 'Timestamp',
+      image: 'Image Compress',
+      convert: 'File Convert',
+      json: 'JSON Format',
+      diff: 'Text Diff',
+      base64: 'Base64',
+      count: 'Text Count',
+      url: 'URL Encode/Decode'
+    },
+    json: {
+      title: 'Format / Validate JSON',
+      placeholder: 'Paste JSON here...',
+      format: 'Format',
+      compress: 'Minify',
+      invalidError: '❌ Invalid JSON: {message}'
+    },
+    diff: {
+      title: 'Text Diff',
+      leftLabel: 'Original',
+      leftPlaceholder: 'Original text...',
+      rightLabel: 'Updated',
+      rightPlaceholder: 'Updated text...',
+      compare: 'Compare',
+      emptyState: 'Enter text on both sides to compare'
+    },
+    base64: {
+      title: 'Base64 Encode / Decode',
+      placeholder: 'Enter text to encode or decode...',
+      encode: 'Encode →',
+      decode: '← Decode'
+    },
+    count: {
+      title: 'Text Count & Analysis',
+      placeholder: 'Enter text for live stats...',
+      stats: {
+        chars: 'Characters',
+        chinese: 'Chinese',
+        english: 'English Words',
+        lines: 'Lines',
+        spaces: 'Spaces',
+        punct: 'Punctuation'
+      }
+    },
+    url: {
+      title: 'URL Encode / Decode',
+      placeholder: 'Enter a URL or string...',
+      encode: 'Encode →',
+      decode: '← Decode',
+      decodeError: '❌ Unable to decode. Please check the input.'
+    },
+    timestamp: {
+      title: 'Timestamp Converter',
+      unitLabel: 'Timestamp Unit',
+      radiogroupLabel: 'Timestamp unit selector',
+      livePanelLabel: 'Live current time status',
+      currentTimestampLabel: 'Current Timestamp',
+      currentTimeLabel: 'Current Time',
+      copyCurrentTimestamp: 'Click to copy the current timestamp',
+      copyCurrentTime: 'Click to copy the current time',
+      dateToTimestampLabel: 'Time → Timestamp',
+      timestampToDateLabel: 'Timestamp → Time',
+      datetimePlaceholder: 'Select date and time',
+      inputPlaceholderSeconds: 'Enter timestamp (seconds)',
+      inputPlaceholderMilliseconds: 'Enter timestamp (milliseconds)',
+      selectTime: 'Select time',
+      copyResult: 'Click to copy the result',
+      prevMonth: 'Previous month',
+      nextMonth: 'Next month',
+      quick: {
+        now: 'Now',
+        today: 'Today',
+        yesterday: 'Yesterday',
+        tomorrow: 'Tomorrow',
+        weekStart: 'Week Start',
+        monthStart: 'Month Start'
+      },
+      weekdays: {
+        mon: 'Mon',
+        tue: 'Tue',
+        wed: 'Wed',
+        thu: 'Thu',
+        fri: 'Fri',
+        sat: 'Sat',
+        sun: 'Sun'
+      },
+      hour: 'Hour',
+      minute: 'Min',
+      second: 'Sec',
+      pickerEmpty: 'No date/time selected',
+      currentTimestampPlaceholder: 'Please enter a timestamp',
+      invalidNumber: '❌ Invalid number',
+      invalidTimestamp: '❌ Invalid timestamp',
+      chooseTime: 'Please select a time',
+      detectAutoMilliseconds: 'Auto-detected milliseconds (13 digits)',
+      detectAutoSeconds: 'Auto-detected seconds (10 digits)',
+      detectByCurrentUnit: 'Parsed using the current “{unit}” setting',
+      units: {
+        seconds: 'seconds',
+        milliseconds: 'milliseconds'
+      },
+      monthTitle: '{year}-{month}'
+    },
+    image: {
+      title: 'Image Compress / Custom Crop',
+      uploadLabel: 'Upload Images',
+      sourceMetaIdle: 'Select images to start editing',
+      batchMetaIdle: 'Click, drag, or batch upload images',
+      queueEmpty: 'No images yet. Upload images to switch between them and crop each one separately if needed.',
+      canvasAriaLabel: 'Image crop editor',
+      emptyState: 'Drag images here or use the upload button above. By default, one crop rule applies to all uploaded images.',
+      help: 'All images share the same crop by default. You can switch to a specific image and enable a custom crop for it only.',
+      resetCrop: 'Reset Current Crop',
+      clearAll: 'Clear All',
+      exportSettings: 'Export Settings',
+      formatLabel: 'Output Format',
+      qualityLabel: 'Compression Quality',
+      widthLabel: 'Output Width',
+      widthPlaceholder: 'Default: crop width',
+      heightLabel: 'Output Height',
+      heightPlaceholder: 'Default: crop height',
+      customCropToggle: 'Use a custom crop for this image',
+      cropMetaEmpty: 'Crop: --',
+      cropMeta: 'Crop: {width} × {height} · Origin {x}, {y}',
+      exportSummaryIdle: 'Crop first, then export a compressed result and preview it below.',
+      exportSummaryBatching: 'Processing {count} images and building a ZIP archive...',
+      exportSummaryGenerating: 'Generating the preview for the current image...',
+      exportSummaryReady: 'Export: {format} · {width} × {height} · {mode}',
+      exportModeBatch: 'batch export available',
+      exportModeSingle: 'single image export',
+      generateButton: 'Generate Preview',
+      generatingButton: 'Generating...',
+      downloadCurrentButton: 'Download Current',
+      downloadAllButton: 'Export All',
+      downloadingAllButton: 'Building ZIP...',
+      resultPreviewAlt: 'Compressed result preview',
+      resultEmpty: 'The preview will appear here after generation',
+      resultMetaCurrent: 'Result: {width} × {height} · {size} · {format} · Current Image',
+      sourceMeta: 'Current: {name} · {width} × {height} · {size}',
+      batchMetaLoaded: '{count} images loaded · Shared crop by default, with optional per-image overrides',
+      queueBadgeCustom: 'Custom',
+      queueBadgeShared: 'Shared',
+      removeImageAria: 'Remove {name}',
+      removeConfirm: `Remove this image?\n\n{name}`,
+      generateFailedNoBlob: 'Generation failed: the browser could not create image data. Please try again.',
+      generateSuccess: 'Preview generated. You can download it now or continue with batch export.',
+      generateFailedGeneric: 'Generation failed while processing the current image.',
+      downloadFailedNoResult: 'Download failed: generate a preview before downloading.',
+      downloadSuccess: 'Exported current image: {name}',
+      zipFailedNoEntries: 'ZIP export failed: there are no generated images to export.',
+      zipSuccess: 'ZIP complete: exported {count} files',
+      zipFailedGeneric: 'ZIP export failed during batch processing.'
+    },
+    convert: {
+      title: 'File Conversion',
+      typeLabel: 'Conversion Type',
+      fileLabel: 'Choose File',
+      fileMetaIdle: 'Select a file to convert',
+      defaultHint: 'All conversions run locally in your browser. Nothing is uploaded to a server.',
+      previewLabel: 'Result Preview',
+      resultPlaceholder: 'The conversion result will appear here',
+      runButton: 'Start Conversion',
+      runningButton: 'Converting...',
+      downloadButton: 'Download Result',
+      fileMetaCurrent: 'Current file: {name} · {size}',
+      resultTextEmpty: 'Conversion completed, but the result is empty',
+      resultMeta: 'Result: {name} · {size}',
+      resultMetaImages: 'Result: {count} page images ready for ZIP download',
+      resultFailure: 'Result: conversion failed',
+      converting: 'Converting, please wait...',
+      completedZipPreview: 'Generated {count} worksheet CSV files and packed them into a ZIP archive.',
+      completedZipMessage: 'Conversion complete: {count} worksheets exported as a CSV ZIP.',
+      completedSheetMessage: 'Conversion complete: worksheet {sheet} was exported to CSV.',
+      csvToXlsxPreview: 'CSV converted to XLSX. Click download to save the result.',
+      csvToXlsxMessage: 'Conversion complete: CSV was converted to XLSX.',
+      docxToTxtMessage: 'Conversion complete: DOCX content was extracted as TXT.',
+      pdfImagesMessage: 'Conversion complete: generated previews for {count} pages.',
+      failed: 'Conversion failed: {message}',
+      unknownError: 'Unknown error',
+      preparingImageZip: 'Preparing a ZIP download for {count} images...',
+      downloadedImageZip: 'Download complete: PDF page image ZIP exported.',
+      downloadFailedNoResult: 'Download failed: there is no conversion result to download.',
+      downloadedFile: 'Download complete: {name}',
+      imagePageLabel: 'Page {page}',
+      imageAlt: 'Preview for page {page}',
+      pdfTextPageHeader: '--- Page {page} ---',
+      invalidPage: 'Page is out of range: {page}',
+      invalidPageRange: 'Page range is out of bounds: {range}',
+      invalidPageInput: 'Unrecognized page range: {range}',
+      types: {
+        xlsxToCsv: 'XLSX → CSV',
+        csvToXlsx: 'CSV → XLSX',
+        docxToTxt: 'DOCX → TXT',
+        pdfToText: 'PDF → Text',
+        pdfToImages: 'PDF → Images'
+      },
+      typeHints: {
+        'xlsx-to-csv': 'Upload an Excel file and convert it to CSV text.',
+        'csv-to-xlsx': 'Upload a CSV file and convert it to an XLSX workbook.',
+        'docx-to-txt': 'Upload a Word document and extract plain text as TXT.',
+        'pdf-to-text': 'Upload a PDF file and extract its text content.',
+        'pdf-to-images': 'Upload a PDF file and render each page as an image.'
+      },
+      dropzone: 'You can also drag and drop a file here',
+      sheetSelectLabel: 'Worksheet',
+      sheetModeLabel: 'CSV Export Mode',
+      sheetMode: {
+        single: 'Current Worksheet',
+        all: 'All Worksheets (ZIP)'
+      },
+      csvDelimiterLabel: 'CSV Delimiter',
+      delimiters: {
+        comma: 'Comma ,',
+        semicolon: 'Semicolon ;',
+        tab: 'Tab'
+      },
+      pdfScaleLabel: 'PDF Image Quality',
+      pdfScales: {
+        standard: 'Standard (1x)',
+        clear: 'Clear (1.5x)',
+        hd: 'HD (2x)',
+        ultra: 'Ultra (2.5x)'
+      },
+      pdfPagesLabel: 'Page Range',
+      pdfPagesPlaceholder: 'Leave empty for all pages, e.g. 1-3,5,8'
+    },
+    support: {
+      footerNotice: '📌 Everything runs locally in your browser · Your data is not uploaded · Pure frontend utilities',
+      footerPrompt: 'If you find this useful, ',
+      footerLink: 'buy me a coffee ☕',
+      modalTitle: '❤️ Thanks for your support!',
+      tabsAriaLabel: 'Donation methods',
+      cnTab: 'Domestic',
+      intlTab: 'International',
+      cnQrText: 'Scan the Alipay QR code to support',
+      qrAlt: 'Donation QR code',
+      contactLabel: 'You can also contact the author: ',
+      copyContact: 'Copy Contact',
+      copiedContact: 'Copied',
+      intlHint: 'If Alipay is not available, consider one of these international support options:',
+      intlSetupHint: 'Configure the three channels above with your own usernames to make them ready for public use.',
+      paypalConfigured: 'Support via PayPal',
+      paypalPending: 'PayPal (Not configured)',
+      paypalMissingText: 'PayPal username not configured',
+      bmacPending: 'Buy Me a Coffee (Not configured)',
+      bmacMissingText: 'Buy Me a Coffee username not configured',
+      kofiPending: 'Ko-fi (Not configured)',
+      kofiMissingText: 'Ko-fi username not configured'
+    }
+  }
+};
+
+function getTranslationValue(locale, key) {
+  return key.split('.').reduce((value, part) => (value && value[part] !== undefined ? value[part] : undefined), translations[locale]);
+}
+
+function normalizeLanguage(lang) {
+  if (!lang) return 'zh-CN';
+  const lowered = String(lang).toLowerCase();
+  if (lowered.startsWith('zh')) return 'zh-CN';
+  if (lowered.startsWith('en')) return 'en';
+  return SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
+}
+
+function detectPreferredLanguage() {
+  try {
+    const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (saved) {
+      const normalizedSaved = normalizeLanguage(saved);
+      if (SUPPORTED_LANGUAGES.includes(normalizedSaved)) return normalizedSaved;
+    }
+  } catch {}
+
+  const browserLang = typeof navigator !== 'undefined' ? navigator.language || navigator.userLanguage : '';
+  return normalizeLanguage(browserLang);
+}
+
+let currentLanguage = detectPreferredLanguage();
+
+function t(key, params = {}) {
+  const template = getTranslationValue(currentLanguage, key)
+    ?? getTranslationValue(LANGUAGE_FALLBACKS[currentLanguage] || 'en', key)
+    ?? key;
+  return String(template).replace(/\{(\w+)\}/g, (_, name) => (params[name] ?? `{${name}}`));
+}
+
+function getCurrentLanguage() {
+  return currentLanguage;
+}
+
+function formatDateTimeByLanguage(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '--';
+  return date.toLocaleString(currentLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
+}
+
+function applyI18n() {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = currentLanguage === 'zh-CN' ? 'zh-CN' : 'en';
+  document.title = t('meta.title');
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = t(el.dataset.i18nTitle);
+  });
+
+  document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel));
+  });
+
+  document.querySelectorAll('[data-i18n-alt]').forEach(el => {
+    el.setAttribute('alt', t(el.dataset.i18nAlt));
+  });
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.id === `lang-${currentLanguage}`);
+  });
+}
+
+function setLanguage(lang) {
+  const normalized = normalizeLanguage(lang);
+  if (!SUPPORTED_LANGUAGES.includes(normalized)) return;
+  currentLanguage = normalized;
+  try {
+    localStorage.setItem(LOCALE_STORAGE_KEY, normalized);
+  } catch {}
+  applyI18n();
+  refreshLocalizedUI();
+}
+
+function refreshLocalizedUI() {
+  applyI18n();
+  updateTimestampInputPlaceholder();
+  updateTimestampPickerPreview();
+  renderTimestampPickerCalendar();
+  refreshNow();
+
+  const timestampInput = document.getElementById('ts-timestamp');
+  if (timestampInput && timestampInput.value.trim()) {
+    tsToDate();
+  }
+
+  const datetimeInput = document.getElementById('ts-datetime');
+  if (datetimeInput && datetimeInput.value.trim()) {
+    dateToTs();
+  }
+
+  renderImageQueue();
+  syncImageMeta();
+  updateImageCompressionSummary();
+  updateImageActionButtons();
+  if (!imageToolState.resultBlob) {
+    clearImageResult();
+  }
+
+  restoreConvertHint(true);
+  if (fileConvertState.file) {
+    const meta = document.getElementById('convert-file-meta');
+    if (meta) {
+      meta.textContent = t('convert.fileMetaCurrent', {
+        name: fileConvertState.file.name,
+        size: formatBytes(fileConvertState.file.size)
+      });
+    }
+  }
+  if (fileConvertState.resultText) {
+    setConvertResultText(fileConvertState.resultName, fileConvertState.resultText);
+  } else if (fileConvertState.resultImages.length) {
+    setConvertResultImages(fileConvertState.resultImages);
+  } else if (fileConvertState.resultBlob && fileConvertState.resultName) {
+    setConvertResultBlob(
+      fileConvertState.resultName,
+      fileConvertState.resultBlob,
+      fileConvertState.resultPreviewKey ? t(fileConvertState.resultPreviewKey, fileConvertState.resultPreviewParams || {}) : t('convert.resultPlaceholder')
+    );
+  } else {
+    clearFileConversionResult();
+  }
+  updateConvertButtons();
+
+  applySupportLinks();
 }
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -34,7 +723,7 @@ function formatJSON() {
     outEl.textContent = JSON.stringify(parsed, null, 2);
     errEl.textContent = '';
   } catch (e) {
-    errEl.textContent = '❌ JSON 格式错误: ' + e.message;
+    errEl.textContent = t('json.invalidError', { message: e.message });
     outEl.textContent = '';
   }
 }
@@ -46,7 +735,7 @@ function compressJSON() {
     outEl.textContent = JSON.stringify(JSON.parse(input));
     errEl.textContent = '';
   } catch (e) {
-    errEl.textContent = '❌ JSON 格式错误: ' + e.message;
+    errEl.textContent = t('json.invalidError', { message: e.message });
     outEl.textContent = '';
   }
 }
@@ -74,7 +763,7 @@ function runDiff() {
   }
 
   if (!left && !right) {
-    out.innerHTML = '<span style="color:var(--text-dim)">请在两侧输入文本后对比</span>';
+    out.innerHTML = `<span style="color:var(--text-dim)">${escapeHtml(t('diff.emptyState'))}</span>`;
   } else {
     out.innerHTML = html;
   }
@@ -102,7 +791,7 @@ function urlDecode() {
   try {
     document.getElementById('url-output').textContent = decodeURIComponent(document.getElementById('url-input').value);
   } catch {
-    document.getElementById('url-output').textContent = '❌ 无法解码，请检查输入';
+    document.getElementById('url-output').textContent = t('url.decodeError');
   }
 }
 
@@ -261,20 +950,30 @@ function syncImageMeta() {
 
   if (sourceMeta) {
     sourceMeta.textContent = activeItem
-      ? `当前：${activeItem.fileName} · ${activeItem.naturalWidth} × ${activeItem.naturalHeight} · ${formatBytes(activeItem.originalSize)}`
-      : '请选择图片后开始编辑';
+      ? t('image.sourceMeta', {
+          name: activeItem.fileName,
+          width: activeItem.naturalWidth,
+          height: activeItem.naturalHeight,
+          size: formatBytes(activeItem.originalSize)
+        })
+      : t('image.sourceMetaIdle');
   }
 
   if (batchMeta) {
     batchMeta.textContent = imageToolState.items.length
-      ? `已加载 ${imageToolState.items.length} 张图片 · 默认共用裁剪规则，可切换到单张图片单独处理`
-      : '支持点击、拖拽、批量上传图片';
+      ? t('image.batchMetaLoaded', { count: imageToolState.items.length })
+      : t('image.batchMetaIdle');
   }
 
   if (cropMeta) {
     cropMeta.textContent = imageToolState.crop
-      ? `裁剪区：${Math.round(imageToolState.crop.width)} × ${Math.round(imageToolState.crop.height)} · 起点 ${Math.round(imageToolState.crop.x)}, ${Math.round(imageToolState.crop.y)}`
-      : '裁剪区：--';
+      ? t('image.cropMeta', {
+          width: Math.round(imageToolState.crop.width),
+          height: Math.round(imageToolState.crop.height),
+          x: Math.round(imageToolState.crop.x),
+          y: Math.round(imageToolState.crop.y)
+        })
+      : t('image.cropMetaEmpty');
   }
 
   if (toggle) {
@@ -288,7 +987,7 @@ function renderImageQueue() {
   if (!queue) return;
 
   if (!imageToolState.items.length) {
-    queue.innerHTML = '<div class="img-queue-empty">暂无图片。上传后可逐张切换，并为单张图片单独调整裁剪。</div>';
+    queue.innerHTML = `<div class="img-queue-empty">${escapeHtml(t('image.queueEmpty'))}</div>`;
     return;
   }
 
@@ -301,8 +1000,8 @@ function renderImageQueue() {
           <span class="img-queue-sub">${item.naturalWidth} × ${item.naturalHeight} · ${formatBytes(item.originalSize)}</span>
         </span>
       </button>
-      <span class="img-queue-badge">${item.useCustomCrop ? '单独' : '共用'}</span>
-      <button type="button" class="img-queue-remove" onclick="removeImageAtIndex(${index})" aria-label="删除 ${escapeHtml(item.fileName)}">×</button>
+      <span class="img-queue-badge">${item.useCustomCrop ? t('image.queueBadgeCustom') : t('image.queueBadgeShared')}</span>
+      <button type="button" class="img-queue-remove" onclick="removeImageAtIndex(${index})" aria-label="${escapeHtml(t('image.removeImageAria', { name: item.fileName }))}">×</button>
     </div>
   `).join('');
 }
@@ -312,9 +1011,7 @@ function removeImageAtIndex(index) {
   const item = imageToolState.items[index];
   const shouldDelete = typeof window === 'undefined' || typeof window.confirm !== 'function'
     ? true
-    : window.confirm(`确认删除这张图片吗？
-
-${item ? item.fileName : ''}`);
+    : window.confirm(t('image.removeConfirm', { name: item ? item.fileName : '' }));
   if (!shouldDelete) return;
   imageToolState.items.splice(index, 1);
 
@@ -445,7 +1142,7 @@ function updateImageCompressionSummary() {
   const heightInput = document.getElementById('img-max-height');
   if (!summary) return;
   if (!imageToolState.image || !imageToolState.crop) {
-    summary.textContent = '裁剪后可压缩导出，并在下方预览结果。';
+    summary.textContent = t('image.exportSummaryIdle');
     updateImageActionButtons();
     return;
   }
@@ -457,12 +1154,17 @@ function updateImageCompressionSummary() {
   const exportHeight = normalizeDimensionValue(heightInput && heightInput.value ? heightInput.value : cropHeight, cropHeight);
 
   summary.textContent = imageToolState.isBatchProcessing
-    ? `正在处理 ${imageToolState.items.length} 张图片并打包 ZIP，请稍候...`
+    ? t('image.exportSummaryBatching', { count: imageToolState.items.length })
     : imageToolState.isProcessing
-      ? '正在生成当前图片预览，请稍候...'
+      ? t('image.exportSummaryGenerating')
       : imageToolState.lastActionMessage
         ? imageToolState.lastActionMessage
-        : `导出：${format} · ${exportWidth} × ${exportHeight} · ${imageToolState.items.length > 1 ? '支持批量导出' : '单张导出'}`;
+        : t('image.exportSummaryReady', {
+            format,
+            width: exportWidth,
+            height: exportHeight,
+            mode: imageToolState.items.length > 1 ? t('image.exportModeBatch') : t('image.exportModeSingle')
+          });
   updateImageActionButtons();
 }
 
@@ -476,14 +1178,15 @@ function updateImageActionButtons() {
 
   if (generateBtn) {
     generateBtn.disabled = !hasActiveImage || imageToolState.isProcessing || imageToolState.isBatchProcessing;
-    generateBtn.textContent = imageToolState.isProcessing ? '生成中...' : '生成当前预览';
+    generateBtn.textContent = imageToolState.isProcessing ? t('image.generatingButton') : t('image.generateButton');
   }
   if (downloadBtn) {
     downloadBtn.disabled = !hasResult || imageToolState.isProcessing || imageToolState.isBatchProcessing;
+    downloadBtn.textContent = t('image.downloadCurrentButton');
   }
   if (downloadAllBtn) {
     downloadAllBtn.disabled = !hasItems || imageToolState.isBatchProcessing || imageToolState.isProcessing;
-    downloadAllBtn.textContent = imageToolState.isBatchProcessing ? '正在打包 ZIP...' : '批量导出全部';
+    downloadAllBtn.textContent = imageToolState.isBatchProcessing ? t('image.downloadingAllButton') : t('image.downloadAllButton');
   }
 }
 
@@ -515,7 +1218,7 @@ function clearImageResult() {
     empty.classList.remove('hidden');
   }
   if (meta) {
-    meta.textContent = '结果：--';
+    meta.textContent = t('common.resultEmpty');
   }
 }
 
@@ -720,6 +1423,7 @@ function onImageCanvasPointerDown(event) {
   if (!imageToolState.image) return;
   const canvas = getImageCanvas();
   if (!canvas) return;
+  if (typeof event.preventDefault === 'function') event.preventDefault();
 
   const mode = hitTestImageCrop(event.clientX, event.clientY);
   const point = canvasPointToImagePoint(event.clientX, event.clientY);
@@ -747,6 +1451,7 @@ function onImageCanvasPointerDown(event) {
 function onImageCanvasPointerMove(event) {
   const canvas = getImageCanvas();
   if (!canvas || imageToolState.activePointerId !== event.pointerId || !imageToolState.dragMode) return;
+  if (typeof event.preventDefault === 'function') event.preventDefault();
   const point = canvasPointToImagePoint(event.clientX, event.clientY);
 
   if (imageToolState.dragMode === 'move' && imageToolState.draftCrop) {
@@ -784,6 +1489,7 @@ function onImageCanvasPointerMove(event) {
 function onImageCanvasPointerUp(event) {
   const canvas = getImageCanvas();
   if (!canvas || imageToolState.activePointerId !== event.pointerId) return;
+  if (typeof event.preventDefault === 'function') event.preventDefault();
   canvas.releasePointerCapture(event.pointerId);
   canvas.classList.remove('dragging', 'resizing');
   imageToolState.activePointerId = null;
@@ -835,7 +1541,7 @@ function generateCompressedImage() {
   createCompressedBlobForItem(item).then(({ blob, exportWidth, exportHeight, format }) => {
     if (!blob) {
       imageToolState.isProcessing = false;
-      setImageActionMessage('生成失败：浏览器未能产出图片数据，请重试。', 'error');
+      setImageActionMessage(t('image.generateFailedNoBlob'), 'error');
       updateImageCompressionSummary();
       updateImageActionButtons();
       clearImageActionMessageLater(2400);
@@ -860,10 +1566,15 @@ function generateCompressedImage() {
         empty.classList.add('hidden');
       }
       if (meta) {
-        meta.textContent = `结果：${exportWidth} × ${exportHeight} · ${formatBytes(blob.size)} · ${format.toUpperCase()} · 当前图片`;
+        meta.textContent = t('image.resultMetaCurrent', {
+          width: exportWidth,
+          height: exportHeight,
+          size: formatBytes(blob.size),
+          format: format.toUpperCase()
+        });
       }
       imageToolState.isProcessing = false;
-      setImageActionMessage('当前图片预览已生成，可直接下载或继续批量导出。', 'success');
+      setImageActionMessage(t('image.generateSuccess'), 'success');
       updateImageCompressionSummary();
       updateImageActionButtons();
       clearImageActionMessageLater();
@@ -871,7 +1582,7 @@ function generateCompressedImage() {
     reader.readAsDataURL(blob);
   }).catch(() => {
     imageToolState.isProcessing = false;
-    setImageActionMessage('生成失败：处理当前图片时出现错误。', 'error');
+    setImageActionMessage(t('image.generateFailedGeneric'), 'error');
     updateImageCompressionSummary();
     updateImageActionButtons();
     clearImageActionMessageLater(2400);
@@ -881,22 +1592,23 @@ function generateCompressedImage() {
 function downloadCompressedImage() {
   const item = getActiveImageItem();
   if (!item || !imageToolState.resultBlob) {
-    setImageActionMessage('下载失败：当前还没有可下载的结果，请先生成预览。', 'error');
+    setImageActionMessage(t('image.downloadFailedNoResult'), 'error');
     updateImageCompressionSummary();
     clearImageActionMessageLater(2200);
     return;
   }
   const ext = document.getElementById('img-format').value === 'png' ? 'png' : 'jpg';
   const baseName = item.fileName ? item.fileName.replace(/\.[^.]+$/, '') : 'compressed-image';
+  const fileName = `${baseName}-cropped.${ext}`;
   const url = URL.createObjectURL(imageToolState.resultBlob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${baseName}-cropped.${ext}`;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  setImageActionMessage(`已导出当前图片：${baseName}-cropped.${ext}`, 'success');
+  setImageActionMessage(t('image.downloadSuccess', { name: fileName }), 'success');
   updateImageCompressionSummary();
   clearImageActionMessageLater();
 }
@@ -1015,7 +1727,7 @@ function downloadAllCompressedImages() {
     const entries = results.filter(Boolean);
     if (!entries.length) {
       imageToolState.isBatchProcessing = false;
-      setImageActionMessage('打包失败：没有可导出的图片结果。', 'error');
+      setImageActionMessage(t('image.zipFailedNoEntries'), 'error');
       updateImageCompressionSummary();
       updateImageActionButtons();
       clearImageActionMessageLater(2400);
@@ -1031,13 +1743,13 @@ function downloadAllCompressedImages() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     imageToolState.isBatchProcessing = false;
-    setImageActionMessage(`ZIP 打包完成：已导出 ${entries.length} 个文件`, 'success');
+    setImageActionMessage(t('image.zipSuccess', { count: entries.length }), 'success');
     updateImageCompressionSummary();
     updateImageActionButtons();
     clearImageActionMessageLater();
   }).catch(() => {
     imageToolState.isBatchProcessing = false;
-    setImageActionMessage('打包失败：批量导出过程中出现错误。', 'error');
+    setImageActionMessage(t('image.zipFailedGeneric'), 'error');
     updateImageCompressionSummary();
     updateImageActionButtons();
     clearImageActionMessageLater(2400);
@@ -1130,6 +1842,8 @@ const fileConvertState = {
   resultName: '',
   resultText: '',
   resultImages: [],
+  resultPreviewKey: '',
+  resultPreviewParams: null,
   isProcessing: false,
   lastMessage: ''
 };
@@ -1169,7 +1883,7 @@ function updateConvertButtons() {
   const downloadBtn = document.getElementById('convert-download-btn');
   if (runBtn) {
     runBtn.disabled = !fileConvertState.file || fileConvertState.isProcessing;
-    runBtn.textContent = fileConvertState.isProcessing ? '转换中...' : '开始转换';
+    runBtn.textContent = fileConvertState.isProcessing ? t('convert.runningButton') : t('convert.runButton');
   }
   if (downloadBtn) {
     const hasResult = Boolean(fileConvertState.resultBlob || fileConvertState.resultImages.length);
@@ -1183,26 +1897,36 @@ function setConvertMessage(message) {
   if (hint) hint.textContent = message;
 }
 
-function restoreConvertHint() {
-  onConvertTypeChange();
+function getConvertTypeConfig(type = fileConvertState.type) {
+  return {
+    'xlsx-to-csv': { accept: '.xlsx,.xls' },
+    'csv-to-xlsx': { accept: '.csv' },
+    'docx-to-txt': { accept: '.docx' },
+    'pdf-to-text': { accept: '.pdf' },
+    'pdf-to-images': { accept: '.pdf' }
+  }[type];
+}
+
+function getConvertDefaultHint(type = fileConvertState.type) {
+  return `${t(`convert.typeHints.${type}`)} ${t('convert.defaultHint')}`;
+}
+
+function restoreConvertHint(force = false) {
+  const hint = document.getElementById('convert-hint');
+  if (!hint) return;
+  hint.textContent = !force && fileConvertState.lastMessage ? fileConvertState.lastMessage : getConvertDefaultHint();
 }
 
 function onConvertTypeChange() {
-  const type = document.getElementById('convert-type').value;
+  const select = document.getElementById('convert-type');
   const input = document.getElementById('convert-input');
-  const hint = document.getElementById('convert-hint');
+  if (!select) return;
+
+  const type = select.value;
   fileConvertState.type = type;
+  const config = getConvertTypeConfig(type);
 
-  const config = {
-    'xlsx-to-csv': { accept: '.xlsx,.xls', hint: '上传 Excel 文件，转换为 CSV 文本。' },
-    'csv-to-xlsx': { accept: '.csv', hint: '上传 CSV 文件，转换为 XLSX 表格。' },
-    'docx-to-txt': { accept: '.docx', hint: '上传 Word 文档，提取为纯文本 TXT。' },
-    'pdf-to-text': { accept: '.pdf', hint: '上传 PDF 文件，提取文本内容。' },
-    'pdf-to-images': { accept: '.pdf', hint: '上传 PDF 文件，将每页渲染为图片。' }
-  }[type];
-
-  if (input) input.accept = config.accept;
-  if (hint) hint.textContent = config.hint + ' 所有转换都在浏览器本地完成，不会上传到服务器。';
+  if (input && config) input.accept = config.accept;
   fileConvertState.lastMessage = '';
   if (type !== 'xlsx-to-csv') {
     populateWorkbookSheetOptions([]);
@@ -1210,7 +1934,7 @@ function onConvertTypeChange() {
     updateConvertAdvancedOptions();
   }
   clearFileConversionResult();
-  restoreConvertHint();
+  restoreConvertHint(true);
   updateConvertButtons();
 }
 
@@ -1219,23 +1943,26 @@ function clearFileConversionResult() {
   fileConvertState.resultName = '';
   fileConvertState.resultText = '';
   fileConvertState.resultImages = [];
-  fileConvertState.lastMessage = '';
+  fileConvertState.resultPreviewKey = '';
+  fileConvertState.resultPreviewParams = null;
 
   const preview = document.getElementById('convert-result-preview');
   const meta = document.getElementById('convert-result-meta');
-  if (preview) preview.innerHTML = '转换结果会显示在这里';
-  if (meta) meta.textContent = '结果：--';
+  if (preview) preview.innerHTML = escapeHtml(t('convert.resultPlaceholder'));
+  if (meta) meta.textContent = t('common.resultEmpty');
 }
 
 function clearFileConversion() {
   fileConvertState.file = null;
   fileConvertState.isProcessing = false;
+  fileConvertState.lastMessage = '';
   populateWorkbookSheetOptions([]);
   const input = document.getElementById('convert-input');
   const meta = document.getElementById('convert-file-meta');
   if (input) input.value = '';
-  if (meta) meta.textContent = '请选择需要转换的文件';
+  if (meta) meta.textContent = t('convert.fileMetaIdle');
   clearFileConversionResult();
+  restoreConvertHint(true);
   updateConvertButtons();
 }
 
@@ -1243,9 +1970,11 @@ async function onConvertFileChange(event) {
   const file = event.target.files && event.target.files[0];
   fileConvertState.file = file || null;
   const meta = document.getElementById('convert-file-meta');
-  restoreConvertHint();
+  restoreConvertHint(true);
   if (meta) {
-    meta.textContent = file ? `当前文件：${file.name} · ${formatBytes(file.size)}` : '请选择需要转换的文件';
+    meta.textContent = file
+      ? t('convert.fileMetaCurrent', { name: file.name, size: formatBytes(file.size) })
+      : t('convert.fileMetaIdle');
   }
   clearFileConversionResult();
 
@@ -1267,10 +1996,14 @@ function setConvertResultText(name, text) {
   fileConvertState.resultText = text;
   fileConvertState.resultName = name;
   fileConvertState.resultBlob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  fileConvertState.resultPreviewKey = '';
+  fileConvertState.resultPreviewParams = null;
   const preview = document.getElementById('convert-result-preview');
   const meta = document.getElementById('convert-result-meta');
-  if (preview) preview.textContent = text || '转换完成，但结果为空';
-  if (meta) meta.textContent = `结果：${name} · ${formatBytes(fileConvertState.resultBlob.size)}`;
+  if (preview) preview.textContent = text || t('convert.resultTextEmpty');
+  fileConvertState.resultPreviewKey = '';
+  fileConvertState.resultPreviewParams = null;
+  if (meta) meta.textContent = t('convert.resultMeta', { name, size: formatBytes(fileConvertState.resultBlob.size) });
 }
 
 function setConvertResultBlob(name, blob, previewText) {
@@ -1279,19 +2012,21 @@ function setConvertResultBlob(name, blob, previewText) {
   const preview = document.getElementById('convert-result-preview');
   const meta = document.getElementById('convert-result-meta');
   if (preview) preview.textContent = previewText;
-  if (meta) meta.textContent = `结果：${name} · ${formatBytes(blob.size)}`;
+  if (meta) meta.textContent = t('convert.resultMeta', { name, size: formatBytes(blob.size) });
 }
 
 function setConvertResultImages(images) {
   fileConvertState.resultImages = images;
   fileConvertState.resultName = 'pdf-pages.zip';
+  fileConvertState.resultPreviewKey = '';
+  fileConvertState.resultPreviewParams = null;
   const preview = document.getElementById('convert-result-preview');
   const meta = document.getElementById('convert-result-meta');
   if (preview) {
-    preview.innerHTML = `<div class="convert-image-grid">${images.map((item, index) => `<div class="convert-image-card"><img src="${item.url}" alt="Page ${index + 1}" /><span>第 ${index + 1} 页</span></div>`).join('')}</div>`;
+    preview.innerHTML = `<div class="convert-image-grid">${images.map((item, index) => `<div class="convert-image-card"><img src="${item.url}" alt="${escapeHtml(t('convert.imageAlt', { page: index + 1 }))}" /><span>${escapeHtml(t('convert.imagePageLabel', { page: index + 1 }))}</span></div>`).join('')}</div>`;
   }
   if (meta) {
-    meta.textContent = `结果：共 ${images.length} 页图片，可打包下载`;
+    meta.textContent = t('convert.resultMetaImages', { count: images.length });
   }
 }
 
@@ -1321,7 +2056,7 @@ function parsePdfPageSelection(input, totalPages) {
     if (/^\d+$/.test(part)) {
       const page = Number(part);
       if (page < 1 || page > totalPages) {
-        throw new Error(`页码超出范围：${page}`);
+        throw new Error(t('convert.invalidPage', { page }));
       }
       pages.add(page);
       continue;
@@ -1335,7 +2070,7 @@ function parsePdfPageSelection(input, totalPages) {
         [start, end] = [end, start];
       }
       if (start < 1 || end > totalPages) {
-        throw new Error(`页码范围超出限制：${part}`);
+        throw new Error(t('convert.invalidPageRange', { range: part }));
       }
       for (let page = start; page <= end; page += 1) {
         pages.add(page);
@@ -1343,7 +2078,7 @@ function parsePdfPageSelection(input, totalPages) {
       continue;
     }
 
-    throw new Error(`无法识别的页码范围：${part}`);
+    throw new Error(t('convert.invalidPageInput', { range: part }));
   }
 
   return Array.from(pages).sort((a, b) => a - b);
@@ -1352,10 +2087,11 @@ function parsePdfPageSelection(input, totalPages) {
 async function runFileConversion() {
   if (!fileConvertState.file || fileConvertState.isProcessing) return;
   fileConvertState.isProcessing = true;
+  fileConvertState.lastMessage = '';
   clearFileConversionResult();
   const preview = document.getElementById('convert-result-preview');
-  if (preview) preview.textContent = '正在转换，请稍候...';
-  setConvertMessage('正在转换，请稍候...');
+  if (preview) preview.textContent = t('convert.converting');
+  setConvertMessage(t('convert.converting'));
   updateConvertButtons();
 
   try {
@@ -1375,38 +2111,42 @@ async function runFileConversion() {
         const zipBlob = createZipBlob(entries);
         fileConvertState.resultBlob = zipBlob;
         fileConvertState.resultName = `${file.name.replace(/\.[^.]+$/, '')}-worksheets.zip`;
+        fileConvertState.resultPreviewKey = 'convert.completedZipPreview';
+        fileConvertState.resultPreviewParams = { count: entries.length };
         const preview = document.getElementById('convert-result-preview');
         const meta = document.getElementById('convert-result-meta');
-        if (preview) preview.textContent = `已生成 ${entries.length} 个工作表 CSV，并打包为 ZIP。`;
-        if (meta) meta.textContent = `结果：${fileConvertState.resultName} · ${formatBytes(zipBlob.size)}`;
-        setConvertMessage(`转换完成：${entries.length} 个工作表已导出为 CSV ZIP。`);
+        if (preview) preview.textContent = t('convert.completedZipPreview', { count: entries.length });
+        if (meta) meta.textContent = t('convert.resultMeta', { name: fileConvertState.resultName, size: formatBytes(zipBlob.size) });
+        setConvertMessage(t('convert.completedZipMessage', { count: entries.length }));
       } else {
         const sheetSelect = document.getElementById('convert-sheet-select');
         const selectedSheet = sheetSelect && sheetSelect.value ? sheetSelect.value : workbook.SheetNames[0];
         const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[selectedSheet], { FS: getCsvDelimiter() });
         setConvertResultText(`${file.name.replace(/\.[^.]+$/, '')}-${selectedSheet}.csv`, csv);
-        setConvertMessage(`转换完成：工作表 ${selectedSheet} 已成功转换为 CSV。`);
+        setConvertMessage(t('convert.completedSheetMessage', { sheet: selectedSheet }));
       }
     } else if (type === 'csv-to-xlsx') {
       const csvText = await file.text();
-      const worksheet = XLSX.utils.aoa_to_sheet(csvText.split(/\r?\n/).map(line => line.split(',')));
+      const worksheet = XLSX.utils.aoa_to_sheet(csvText.split(/\r?\n/).map(line => line.split(getCsvDelimiter())));
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
       const arrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      setConvertResultBlob(file.name.replace(/\.[^.]+$/, '') + '.xlsx', blob, 'CSV 已转换为 XLSX，可点击下载结果。');
-      setConvertMessage('转换完成：CSV 已成功转换为 XLSX。');
+      fileConvertState.resultPreviewKey = 'convert.csvToXlsxPreview';
+      fileConvertState.resultPreviewParams = null;
+      setConvertResultBlob(file.name.replace(/\.[^.]+$/, '') + '.xlsx', blob, t('convert.csvToXlsxPreview'));
+      setConvertMessage(t('convert.csvToXlsxMessage'));
     } else if (type === 'docx-to-txt') {
       const result = await mammoth.extractRawText({ arrayBuffer: await readFileAsArrayBuffer(file) });
       setConvertResultText(file.name.replace(/\.[^.]+$/, '') + '.txt', result.value.trim());
-      setConvertMessage('转换完成：DOCX 已提取为 TXT。');
+      setConvertMessage(t('convert.docxToTxtMessage'));
     } else if (type === 'pdf-to-text') {
       const pdf = await pdfjsLib.getDocument({ data: await readFileAsArrayBuffer(file) }).promise;
       const texts = [];
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        texts.push(`--- 第 ${i} 页 ---\n` + content.items.map(item => item.str).join(' '));
+        texts.push(`${t('convert.pdfTextPageHeader', { page: i })}\n` + content.items.map(item => item.str).join(' '));
       }
       setConvertResultText(file.name.replace(/\.[^.]+$/, '') + '.txt', texts.join('\n\n'));
     } else if (type === 'pdf-to-images') {
@@ -1429,14 +2169,14 @@ async function runFileConversion() {
         images.push({ blob, url, name: `page-${pageNumber}.png` });
       }
       setConvertResultImages(images);
-      setConvertMessage(`转换完成：已生成 ${images.length} 页图片预览。`);
+      setConvertMessage(t('convert.pdfImagesMessage', { count: images.length }));
     }
   } catch (error) {
     const preview = document.getElementById('convert-result-preview');
     const meta = document.getElementById('convert-result-meta');
-    const message = `转换失败：${error.message || '未知错误'}`;
+    const message = t('convert.failed', { message: error.message || t('convert.unknownError') });
     if (preview) preview.textContent = message;
-    if (meta) meta.textContent = '结果：转换失败';
+    if (meta) meta.textContent = t('convert.resultFailure');
     setConvertMessage(message);
   } finally {
     fileConvertState.isProcessing = false;
@@ -1446,7 +2186,7 @@ async function runFileConversion() {
 
 function downloadFileConversionResult() {
   if (fileConvertState.resultImages.length) {
-    setConvertMessage(`正在准备 ${fileConvertState.resultImages.length} 张图片的 ZIP 下载...`);
+    setConvertMessage(t('convert.preparingImageZip', { count: fileConvertState.resultImages.length }));
     Promise.all(fileConvertState.resultImages.map(item => item.blob.arrayBuffer().then(buffer => ({ name: item.name, bytes: new Uint8Array(buffer) })))).then(entries => {
       const zipBlob = createZipBlob(entries);
       const url = URL.createObjectURL(zipBlob);
@@ -1457,13 +2197,13 @@ function downloadFileConversionResult() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setConvertMessage('下载完成：PDF 页面图片 ZIP 已导出。');
+      setConvertMessage(t('convert.downloadedImageZip'));
     });
     return;
   }
 
   if (!fileConvertState.resultBlob) {
-    setConvertMessage('下载失败：当前没有可下载的转换结果。');
+    setConvertMessage(t('convert.downloadFailedNoResult'));
     return;
   }
   const url = URL.createObjectURL(fileConvertState.resultBlob);
@@ -1474,7 +2214,7 @@ function downloadFileConversionResult() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  setConvertMessage(`下载完成：${fileConvertState.resultName || 'converted-file'}`);
+  setConvertMessage(t('convert.downloadedFile', { name: fileConvertState.resultName || 'converted-file' }));
 }
 
 function onConvertDragOver(event) {
@@ -1498,9 +2238,9 @@ function onConvertDrop(event) {
   const input = document.getElementById('convert-input');
   const meta = document.getElementById('convert-file-meta');
   if (input) input.value = '';
-  if (meta) meta.textContent = `当前文件：${file.name} · ${formatBytes(file.size)}`;
+  if (meta) meta.textContent = t('convert.fileMetaCurrent', { name: file.name, size: formatBytes(file.size) });
   clearFileConversionResult();
-  restoreConvertHint();
+  restoreConvertHint(true);
   if (fileConvertState.type === 'xlsx-to-csv') {
     readFileAsArrayBuffer(file).then(buffer => {
       try {
@@ -1591,10 +2331,10 @@ function updateTimestampPickerPreview() {
   const preview = document.getElementById('ts-picker-preview');
   if (!preview) return;
   if (!timestampPickerState.selectedDate) {
-    preview.textContent = '未选择日期时间';
+    preview.textContent = t('timestamp.pickerEmpty');
     return;
   }
-  const formatted = formatPickerDateTime(timestampPickerState.selectedDate);
+  const formatted = formatDateTimeByLanguage(timestampPickerState.selectedDate);
   if (timestampPickerState.mode === 'timestamp') {
     preview.textContent = formatted + ' → ' + formatTimestampValue(timestampPickerState.selectedDate.getTime()) + ' ' + formatTimestampUnitLabel();
   } else {
@@ -1726,7 +2466,7 @@ function renderTimestampPickerCalendar() {
 
   const year = timestampPickerState.viewingYear;
   const month = timestampPickerState.viewingMonth;
-  title.textContent = `${year} 年 ${padTime(month + 1)} 月`;
+  title.textContent = t('timestamp.monthTitle', { year, month: padTime(month + 1) });
 
   const firstDay = new Date(year, month, 1);
   const startOffset = (firstDay.getDay() + 6) % 7;
@@ -1920,7 +2660,7 @@ function isMillisecondUnit() {
 function updateTimestampInputPlaceholder() {
   const input = document.getElementById('ts-timestamp');
   if (!input) return;
-  input.placeholder = isMillisecondUnit() ? '输入时间戳（毫秒）' : '输入时间戳（秒）';
+  input.placeholder = isMillisecondUnit() ? t('timestamp.inputPlaceholderMilliseconds') : t('timestamp.inputPlaceholderSeconds');
 }
 
 function formatTimestampValue(ms) {
@@ -1928,7 +2668,7 @@ function formatTimestampValue(ms) {
 }
 
 function formatTimestampUnitLabel() {
-  return isMillisecondUnit() ? '毫秒' : '秒';
+  return isMillisecondUnit() ? t('timestamp.units.milliseconds') : t('timestamp.units.seconds');
 }
 
 function updateTimestampDetectHint(message = '') {
@@ -1941,7 +2681,7 @@ function flashCopiedState(element, originalText) {
   if (!element) return;
   element.classList.add('copied');
   element.dataset.originalText = originalText;
-  element.textContent = '✅ 已复制';
+  element.textContent = t('common.copied');
   setTimeout(() => {
     element.classList.remove('copied');
     element.textContent = element.dataset.originalText || originalText;
@@ -1980,7 +2720,8 @@ function copyTimestampResult(id) {
   const element = document.getElementById(id);
   if (!element) return;
   const text = (element.textContent || '').trim();
-  if (!text || text === '--' || text === '请输入时间戳') return;
+  const blocked = ['--', t('timestamp.currentTimestampPlaceholder'), t('timestamp.invalidNumber'), t('timestamp.invalidTimestamp'), t('timestamp.chooseTime')];
+  if (!text || blocked.includes(text)) return;
 
   writeTextToClipboard(text).then(() => {
     flashCopiedState(element, text);
@@ -2059,7 +2800,7 @@ function refreshNow() {
     timestampEl.textContent = nowValue + ' ' + formatTimestampUnitLabel();
   }
   if (displayEl) {
-    displayEl.textContent = new Date(nowMs).toLocaleString('zh-CN');
+    displayEl.textContent = formatDateTimeByLanguage(new Date(nowMs));
   }
   pulseRealtimeStatusRow('ts-now-display', 'ts-now-row-live-tick');
   if (!isMillisecondUnit()) {
@@ -2099,37 +2840,37 @@ setInterval(refreshNow, 1000);
 
 function dateToTs() {
   const val = document.getElementById('ts-datetime').value;
-  if (!val) { document.getElementById('ts-to-ts').textContent = '请选择时间'; return; }
+  if (!val) { document.getElementById('ts-to-ts').textContent = t('timestamp.chooseTime'); return; }
   const parsedDate = parsePickerInputValue(val);
-  if (!parsedDate) { document.getElementById('ts-to-ts').textContent = '请选择时间'; return; }
+  if (!parsedDate) { document.getElementById('ts-to-ts').textContent = t('timestamp.chooseTime'); return; }
   const ms = parsedDate.getTime();
   document.getElementById('ts-to-ts').textContent = formatTimestampValue(ms) + ' ' + formatTimestampUnitLabel();
 }
 function tsToDate() {
   const val = document.getElementById('ts-timestamp').value.trim();
   if (!val) {
-    document.getElementById('ts-to-date').textContent = '请输入时间戳';
+    document.getElementById('ts-to-date').textContent = t('timestamp.currentTimestampPlaceholder');
     updateTimestampDetectHint('');
     return;
   }
   const parsed = parseTimestampToMilliseconds(val);
   if (parsed.error) {
-    document.getElementById('ts-to-date').textContent = '❌ 无效数字';
+    document.getElementById('ts-to-date').textContent = t('timestamp.invalidNumber');
     updateTimestampDetectHint('');
     return;
   }
   const d = new Date(parsed.milliseconds);
   if (Number.isNaN(d.getTime())) {
-    document.getElementById('ts-to-date').textContent = '❌ 无效时间戳';
+    document.getElementById('ts-to-date').textContent = t('timestamp.invalidTimestamp');
     updateTimestampDetectHint('');
     return;
   }
   if (parsed.detectedBy === 'length') {
-    updateTimestampDetectHint(parsed.detectedUnit === 'milliseconds' ? '已自动识别为毫秒（13 位）' : '已自动识别为秒（10 位）');
+    updateTimestampDetectHint(parsed.detectedUnit === 'milliseconds' ? t('timestamp.detectAutoMilliseconds') : t('timestamp.detectAutoSeconds'));
   } else {
-    updateTimestampDetectHint('按当前选择的“' + formatTimestampUnitLabel() + '”解析');
+    updateTimestampDetectHint(t('timestamp.detectByCurrentUnit', { unit: formatTimestampUnitLabel() }));
   }
-  document.getElementById('ts-to-date').textContent = d.toLocaleString('zh-CN');
+  document.getElementById('ts-to-date').textContent = formatDateTimeByLanguage(d);
 }
 
 /* === 通用工具函数 === */
@@ -2149,10 +2890,10 @@ function copyOutput(id) {
     text = el.textContent || el.innerText;
   }
   if (!text || text === '--') return;
-  navigator.clipboard.writeText(text).then(() => {
+  writeTextToClipboard(text).then(() => {
     const btn = event.target;
     const orig = btn.textContent;
-    btn.textContent = '✅ 已复制';
+    btn.textContent = t('common.copied');
     setTimeout(() => btn.textContent = orig, 1200);
   });
 }
@@ -2199,40 +2940,40 @@ function applySupportLinks() {
   const kofiUrl = getKoFiUrl();
 
   if (contactText) {
-    contactText.textContent = supportConfig.contact || '未设置';
+    contactText.textContent = supportConfig.contact || t('common.notSet');
   }
 
   if (paypalLink) {
     paypalLink.href = hasPayPal ? paypalUrl : '#';
-    paypalLink.textContent = hasPayPal ? 'PayPal 支持' : 'PayPal（待配置）';
+    paypalLink.textContent = hasPayPal ? t('support.paypalConfigured') : t('support.paypalPending');
     paypalLink.classList.toggle('is-disabled', !hasPayPal);
     paypalLink.setAttribute('aria-disabled', hasPayPal ? 'false' : 'true');
     paypalLink.tabIndex = hasPayPal ? 0 : -1;
   }
   if (paypalText) {
-    paypalText.textContent = hasPayPal ? paypalUrl : '未配置 PayPal 用户名';
+    paypalText.textContent = hasPayPal ? paypalUrl : t('support.paypalMissingText');
   }
 
   if (bmacLink) {
     bmacLink.href = hasBmac ? bmacUrl : '#';
-    bmacLink.textContent = hasBmac ? 'Buy Me a Coffee' : 'Buy Me a Coffee（待配置）';
+    bmacLink.textContent = hasBmac ? 'Buy Me a Coffee' : t('support.bmacPending');
     bmacLink.classList.toggle('is-disabled', !hasBmac);
     bmacLink.setAttribute('aria-disabled', hasBmac ? 'false' : 'true');
     bmacLink.tabIndex = hasBmac ? 0 : -1;
   }
   if (bmacText) {
-    bmacText.textContent = hasBmac ? bmacUrl : '未配置 Buy Me a Coffee 用户名';
+    bmacText.textContent = hasBmac ? bmacUrl : t('support.bmacMissingText');
   }
 
   if (kofiLink) {
     kofiLink.href = hasKoFi ? kofiUrl : '#';
-    kofiLink.textContent = hasKoFi ? 'Ko-fi' : 'Ko-fi（待配置）';
+    kofiLink.textContent = hasKoFi ? 'Ko-fi' : t('support.kofiPending');
     kofiLink.classList.toggle('is-disabled', !hasKoFi);
     kofiLink.setAttribute('aria-disabled', hasKoFi ? 'false' : 'true');
     kofiLink.tabIndex = hasKoFi ? 0 : -1;
   }
   if (kofiText) {
-    kofiText.textContent = hasKoFi ? kofiUrl : '未配置 Ko-fi 用户名';
+    kofiText.textContent = hasKoFi ? kofiUrl : t('support.kofiMissingText');
   }
 }
 
@@ -2262,11 +3003,11 @@ function copySupportContact() {
   if (!value) return;
   writeTextToClipboard(value).then(() => {
     if (!button) return;
-    const originalText = button.dataset.originalText || button.textContent;
+    const originalText = button.dataset.originalText || t('support.copyContact');
     button.dataset.originalText = originalText;
-    button.textContent = '已复制';
+    button.textContent = t('support.copiedContact');
     setTimeout(() => {
-      button.textContent = button.dataset.originalText || '复制联系方式';
+      button.textContent = button.dataset.originalText || t('support.copyContact');
     }, 1200);
   });
 }
@@ -2349,6 +3090,7 @@ window.addEventListener('resize', () => {
   }
 });
 
+applyI18n();
 onImageQualityChange();
 renderImageQueue();
 updateImageCompressionSummary();
@@ -2358,3 +3100,4 @@ updateImageActionButtons();
 onConvertTypeChange();
 updateConvertAdvancedOptions();
 updateConvertButtons();
+applySupportLinks();
