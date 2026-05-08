@@ -24,113 +24,113 @@
   </header>
 
   <nav class="tabs" id="tabs">
-    <button class="tab active" data-tool="timestamp" data-i18n="tabs.timestamp">时间戳</button>
-    <button class="tab" data-tool="image" data-i18n="tabs.image">图片压缩</button>
-    <button class="tab" data-tool="convert" data-i18n="tabs.convert">文件转换</button>
-    <button class="tab" data-tool="json" data-i18n="tabs.json">JSON 格式化</button>
-    <button class="tab" data-tool="diff" data-i18n="tabs.diff">文本对比</button>
+    <button class="tab active" data-tool="timestamp" data-i18n="tabs.timestamp">Timestamp</button>
+    <button class="tab" data-tool="image" data-i18n="tabs.image">Image Compress</button>
+    <button class="tab" data-tool="convert" data-i18n="tabs.convert">File Convert</button>
+    <button class="tab" data-tool="json" data-i18n="tabs.json">JSON Format</button>
+    <button class="tab" data-tool="diff" data-i18n="tabs.diff">Text Diff</button>
     <button class="tab" data-tool="base64" data-i18n="tabs.base64">Base64</button>
-    <button class="tab" data-tool="count" data-i18n="tabs.count">字数统计</button>
-    <button class="tab" data-tool="url" data-i18n="tabs.url">URL 编解码</button>
+    <button class="tab" data-tool="count" data-i18n="tabs.count">Text Count</button>
+    <button class="tab" data-tool="url" data-i18n="tabs.url">URL Encode/Decode</button>
   </nav>
 
   <main class="container">
     <section id="tool-json" class="tool-panel">
-      <h2 data-i18n="json.title">JSON 格式化 / 校验</h2>
-      <textarea id="json-input" class="code-input" data-i18n-placeholder="json.placeholder" placeholder="粘贴 JSON 到这里..." spellcheck="false"></textarea>
+      <h2 data-i18n="json.title">Format / Validate JSON</h2>
+      <textarea id="json-input" class="code-input" data-i18n-placeholder="json.placeholder" placeholder="Paste JSON here..." spellcheck="false"></textarea>
       <div class="btn-row">
-        <button class="btn primary" onclick="formatJSON()" data-i18n="json.format">格式化</button>
-        <button class="btn" onclick="compressJSON()" data-i18n="json.compress">压缩</button>
-        <button class="btn red" onclick="clearInput('json-input')" data-i18n="common.clear">清空</button>
-        <button class="btn outline" onclick="copyOutput('json-output')" data-i18n="common.copyResult">复制结果</button>
+        <button class="btn primary" onclick="formatJSON()" data-i18n="json.format">Format</button>
+        <button class="btn" onclick="compressJSON()" data-i18n="json.compress">Minify</button>
+        <button class="btn red" onclick="clearInput('json-input')" data-i18n="common.clear">Clear</button>
+        <button class="btn outline" onclick="copyOutput('json-output')" data-i18n="common.copyResult">Copy Result</button>
       </div>
       <div id="json-error" class="error-msg"></div>
       <pre id="json-output" class="code-output"></pre>
     </section>
 
     <section id="tool-diff" class="tool-panel">
-      <h2 data-i18n="diff.title">文本对比</h2>
+      <h2 data-i18n="diff.title">Text Diff</h2>
       <div class="diff-grid">
         <div>
-          <label class="label" data-i18n="diff.leftLabel">原文</label>
-          <textarea id="diff-left" class="code-input" data-i18n-placeholder="diff.leftPlaceholder" placeholder="原始文本..." spellcheck="false"></textarea>
+          <label class="label" data-i18n="diff.leftLabel">Original</label>
+          <textarea id="diff-left" class="code-input" data-i18n-placeholder="diff.leftPlaceholder" placeholder="Original text..." spellcheck="false"></textarea>
         </div>
         <div>
-          <label class="label" data-i18n="diff.rightLabel">修改后</label>
-          <textarea id="diff-right" class="code-input" data-i18n-placeholder="diff.rightPlaceholder" placeholder="修改后的文本..." spellcheck="false"></textarea>
+          <label class="label" data-i18n="diff.rightLabel">Updated</label>
+          <textarea id="diff-right" class="code-input" data-i18n-placeholder="diff.rightPlaceholder" placeholder="Updated text..." spellcheck="false"></textarea>
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn primary" onclick="runDiff()" data-i18n="diff.compare">对比</button>
-        <button class="btn outline" onclick="copyOutput('diff-output')" data-i18n="common.copyResult">复制结果</button>
+        <button class="btn primary" onclick="runDiff()" data-i18n="diff.compare">Compare</button>
+        <button class="btn outline" onclick="copyOutput('diff-output')" data-i18n="common.copyResult">Copy Result</button>
       </div>
       <div id="diff-output" class="diff-output"></div>
     </section>
 
     <section id="tool-base64" class="tool-panel">
-      <h2 data-i18n="base64.title">Base64 编解码</h2>
-      <textarea id="base64-input" class="code-input" data-i18n-placeholder="base64.placeholder" placeholder="输入要编解码的文本..." spellcheck="false"></textarea>
+      <h2 data-i18n="base64.title">Base64 Encode / Decode</h2>
+      <textarea id="base64-input" class="code-input" data-i18n-placeholder="base64.placeholder" placeholder="Enter text to encode or decode..." spellcheck="false"></textarea>
       <div class="btn-row">
-        <button class="btn primary" onclick="base64Encode()" data-i18n="base64.encode">编码 →</button>
-        <button class="btn" onclick="base64Decode()" data-i18n="base64.decode">← 解码</button>
-        <button class="btn red" onclick="clearInput('base64-input')" data-i18n="common.clear">清空</button>
-        <button class="btn outline" onclick="copyOutput('base64-output')" data-i18n="common.copyResult">复制结果</button>
+        <button class="btn primary" onclick="base64Encode()" data-i18n="base64.encode">Encode →</button>
+        <button class="btn" onclick="base64Decode()" data-i18n="base64.decode">← Decode</button>
+        <button class="btn red" onclick="clearInput('base64-input')" data-i18n="common.clear">Clear</button>
+        <button class="btn outline" onclick="copyOutput('base64-output')" data-i18n="common.copyResult">Copy Result</button>
       </div>
       <pre id="base64-output" class="code-output"></pre>
     </section>
 
     <section id="tool-count" class="tool-panel">
-      <h2 data-i18n="count.title">字数统计与分析</h2>
-      <textarea id="count-input" class="code-input" data-i18n-placeholder="count.placeholder" placeholder="输入文本，实时统计..." oninput="liveCount()" spellcheck="false"></textarea>
+      <h2 data-i18n="count.title">Text Count &amp; Analysis</h2>
+      <textarea id="count-input" class="code-input" data-i18n-placeholder="count.placeholder" placeholder="Enter text for live stats..." oninput="liveCount()" spellcheck="false"></textarea>
       <div class="stats-grid" id="stats-grid">
-        <div class="stat-card"><span class="stat-num" id="stat-chars">0</span><span class="stat-label" data-i18n="count.stats.chars">总字符</span></div>
-        <div class="stat-card"><span class="stat-num" id="stat-chinese">0</span><span class="stat-label" data-i18n="count.stats.chinese">中文字</span></div>
-        <div class="stat-card"><span class="stat-num" id="stat-english">0</span><span class="stat-label" data-i18n="count.stats.english">英文单词</span></div>
-        <div class="stat-card"><span class="stat-num" id="stat-lines">0</span><span class="stat-label" data-i18n="count.stats.lines">行数</span></div>
-        <div class="stat-card"><span class="stat-num" id="stat-spaces">0</span><span class="stat-label" data-i18n="count.stats.spaces">空格</span></div>
-        <div class="stat-card"><span class="stat-num" id="stat-punct">0</span><span class="stat-label" data-i18n="count.stats.punct">标点</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-chars">0</span><span class="stat-label" data-i18n="count.stats.chars">Characters</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-chinese">0</span><span class="stat-label" data-i18n="count.stats.chinese">Chinese</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-english">0</span><span class="stat-label" data-i18n="count.stats.english">English Words</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-lines">0</span><span class="stat-label" data-i18n="count.stats.lines">Lines</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-spaces">0</span><span class="stat-label" data-i18n="count.stats.spaces">Spaces</span></div>
+        <div class="stat-card"><span class="stat-num" id="stat-punct">0</span><span class="stat-label" data-i18n="count.stats.punct">Punctuation</span></div>
       </div>
-      <button class="btn outline" onclick="copyOutput('count-input')" data-i18n="common.copyText">复制文本</button>
+      <button class="btn outline" onclick="copyOutput('count-input')" data-i18n="common.copyText">Copy Text</button>
     </section>
 
     <section id="tool-url" class="tool-panel">
-      <h2 data-i18n="url.title">URL 编解码</h2>
-      <textarea id="url-input" class="code-input" data-i18n-placeholder="url.placeholder" placeholder="输入 URL 或字符串..." spellcheck="false"></textarea>
+      <h2 data-i18n="url.title">URL Encode / Decode</h2>
+      <textarea id="url-input" class="code-input" data-i18n-placeholder="url.placeholder" placeholder="Enter a URL or string..." spellcheck="false"></textarea>
       <div class="btn-row">
-        <button class="btn primary" onclick="urlEncode()" data-i18n="url.encode">编码 →</button>
-        <button class="btn" onclick="urlDecode()" data-i18n="url.decode">← 解码</button>
-        <button class="btn red" onclick="clearInput('url-input')" data-i18n="common.clear">清空</button>
-        <button class="btn outline" onclick="copyOutput('url-output')" data-i18n="common.copyResult">复制结果</button>
+        <button class="btn primary" onclick="urlEncode()" data-i18n="url.encode">Encode →</button>
+        <button class="btn" onclick="urlDecode()" data-i18n="url.decode">← Decode</button>
+        <button class="btn red" onclick="clearInput('url-input')" data-i18n="common.clear">Clear</button>
+        <button class="btn outline" onclick="copyOutput('url-output')" data-i18n="common.copyResult">Copy Result</button>
       </div>
       <pre id="url-output" class="code-output"></pre>
     </section>
 
     <section id="tool-timestamp" class="tool-panel active">
-      <h2 data-i18n="timestamp.title">时间戳转换</h2>
+      <h2 data-i18n="timestamp.title">Timestamp Converter</h2>
       <div class="ts-row">
         <div class="ts-card">
-          <label class="label" data-i18n="timestamp.unitLabel">时间戳单位</label>
-          <div class="ts-unit-toggle" role="radiogroup" data-i18n-aria-label="timestamp.radiogroupLabel" aria-label="时间戳单位选择">
+          <label class="label" data-i18n="timestamp.unitLabel">Timestamp Unit</label>
+          <div class="ts-unit-toggle" role="radiogroup" data-i18n-aria-label="timestamp.radiogroupLabel" aria-label="Timestamp unit selector">
             <label class="ts-unit-option">
               <input type="radio" name="ts-unit" value="seconds" checked onchange="onTimestampUnitChange()" />
-              <span data-i18n="timestamp.units.seconds">秒</span>
+              <span data-i18n="timestamp.units.seconds">seconds</span>
             </label>
             <label class="ts-unit-option">
               <input type="radio" name="ts-unit" value="milliseconds" onchange="onTimestampUnitChange()" />
-              <span data-i18n="timestamp.units.milliseconds">毫秒</span>
+              <span data-i18n="timestamp.units.milliseconds">milliseconds</span>
             </label>
           </div>
-          <div class="ts-now-panel" data-i18n-aria-label="timestamp.livePanelLabel" aria-label="当前时间实时状态">
+          <div class="ts-now-panel" data-i18n-aria-label="timestamp.livePanelLabel" aria-label="Live current time status">
             <div class="ts-now-live" aria-hidden="true">
               <span class="ts-now-live-dot"></span>
-              <span class="ts-now-live-text">LIVE</span>
+              <span class="ts-now-live-text" data-i18n="timestamp.liveLabel">LIVE</span>
             </div>
-            <div class="ts-now-row ts-copyable" onclick="copyTimestampResult('ts-now-timestamp')" data-i18n-title="timestamp.copyCurrentTimestamp" title="点击复制当前时间戳">
-              <span class="ts-now-key" data-i18n="timestamp.currentTimestampLabel">当前时间戳</span>
+            <div class="ts-now-row ts-copyable" onclick="copyTimestampResult('ts-now-timestamp')" data-i18n-title="timestamp.copyCurrentTimestamp" title="Click to copy the current timestamp">
+              <span class="ts-now-key" data-i18n="timestamp.currentTimestampLabel">Current Timestamp</span>
               <span class="ts-now-data" id="ts-now-timestamp">--</span>
             </div>
-            <div class="ts-now-row ts-copyable" onclick="copyTimestampResult('ts-now-display')" data-i18n-title="timestamp.copyCurrentTime" title="点击复制当前时间">
-              <span class="ts-now-key" data-i18n="timestamp.currentTimeLabel">当前时间</span>
+            <div class="ts-now-row ts-copyable" onclick="copyTimestampResult('ts-now-display')" data-i18n-title="timestamp.copyCurrentTime" title="Click to copy the current time">
+              <span class="ts-now-key" data-i18n="timestamp.currentTimeLabel">Current Time</span>
               <span class="ts-now-data ts-now-data-wide" id="ts-now-display">--</span>
             </div>
           </div>
@@ -138,46 +138,46 @@
       </div>
       <div class="ts-row">
         <div class="ts-card">
-          <label class="label" data-i18n="timestamp.dateToTimestampLabel">时间 → 时间戳</label>
+          <label class="label" data-i18n="timestamp.dateToTimestampLabel">Time &rarr; Timestamp</label>
           <div class="ts-picker-wrap">
-            <input type="text" id="ts-datetime" class="ts-input ts-datetime-input" data-i18n-placeholder="timestamp.datetimePlaceholder" placeholder="选择日期和时间" readonly onclick="openTimestampPicker('datetime')" />
+            <input type="text" id="ts-datetime" class="ts-input ts-datetime-input" data-i18n-placeholder="timestamp.datetimePlaceholder" placeholder="Select date and time" readonly onclick="openTimestampPicker('datetime')" />
             <div id="ts-picker-panel" class="ts-picker-panel hidden">
               <div class="ts-picker-header">
-                <button class="btn outline small" type="button" onclick="changeTimestampPickerMonth(-1)" data-i18n-aria-label="timestamp.prevMonth" aria-label="上一月">‹</button>
+                <button class="btn outline small" type="button" onclick="changeTimestampPickerMonth(-1)" data-i18n-aria-label="timestamp.prevMonth" aria-label="Previous month">&lsaquo;</button>
                 <div id="ts-picker-title" class="ts-picker-title">--</div>
-                <button class="btn outline small" type="button" onclick="changeTimestampPickerMonth(1)" data-i18n-aria-label="timestamp.nextMonth" aria-label="下一月">›</button>
+                <button class="btn outline small" type="button" onclick="changeTimestampPickerMonth(1)" data-i18n-aria-label="timestamp.nextMonth" aria-label="Next month">&rsaquo;</button>
               </div>
 
               <div class="ts-picker-layout">
                 <div class="ts-picker-calendar">
                   <div class="ts-weekdays">
-                    <span data-i18n="timestamp.weekdays.mon">一</span><span data-i18n="timestamp.weekdays.tue">二</span><span data-i18n="timestamp.weekdays.wed">三</span><span data-i18n="timestamp.weekdays.thu">四</span><span data-i18n="timestamp.weekdays.fri">五</span><span data-i18n="timestamp.weekdays.sat">六</span><span data-i18n="timestamp.weekdays.sun">日</span>
+                    <span data-i18n="timestamp.weekdays.mon">Mon</span><span data-i18n="timestamp.weekdays.tue">Tue</span><span data-i18n="timestamp.weekdays.wed">Wed</span><span data-i18n="timestamp.weekdays.thu">Thu</span><span data-i18n="timestamp.weekdays.fri">Fri</span><span data-i18n="timestamp.weekdays.sat">Sat</span><span data-i18n="timestamp.weekdays.sun">Sun</span>
                   </div>
                   <div id="ts-picker-days" class="ts-picker-days"></div>
                 </div>
 
                 <div class="ts-picker-side">
                   <div class="ts-quick-actions">
-                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('now')" data-i18n="timestamp.quick.now">此刻</button>
-                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('today')" data-i18n="timestamp.quick.today">今天</button>
-                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('yesterday')" data-i18n="timestamp.quick.yesterday">昨天</button>
-                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('tomorrow')" data-i18n="timestamp.quick.tomorrow">明天</button>
-                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('weekStart')" data-i18n="timestamp.quick.weekStart">本周一</button>
-                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('monthStart')" data-i18n="timestamp.quick.monthStart">本月1号</button>
-                    <button class="btn outline small" type="button" onclick="clearTimestampPicker()" data-i18n="common.clear">清空</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('now')" data-i18n="timestamp.quick.now">Now</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('today')" data-i18n="timestamp.quick.today">Today</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('yesterday')" data-i18n="timestamp.quick.yesterday">Yesterday</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('tomorrow')" data-i18n="timestamp.quick.tomorrow">Tomorrow</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('weekStart')" data-i18n="timestamp.quick.weekStart">Week Start</button>
+                    <button class="btn outline small" type="button" onclick="applyTimestampQuickDate('monthStart')" data-i18n="timestamp.quick.monthStart">Month Start</button>
+                    <button class="btn outline small" type="button" onclick="clearTimestampPicker()" data-i18n="common.clear">Clear</button>
                   </div>
 
                   <div class="ts-time-selectors">
                     <label class="ts-time-field">
-                      <span data-i18n="timestamp.hour">时</span>
+                      <span data-i18n="timestamp.hour">Hour</span>
                       <select id="ts-picker-hour" class="ts-select" onchange="onTimestampPickerTimeChange()"></select>
                     </label>
                     <label class="ts-time-field">
-                      <span data-i18n="timestamp.minute">分</span>
+                      <span data-i18n="timestamp.minute">Min</span>
                       <select id="ts-picker-minute" class="ts-select" onchange="onTimestampPickerTimeChange()"></select>
                     </label>
                     <label class="ts-time-field">
-                      <span data-i18n="timestamp.second">秒</span>
+                      <span data-i18n="timestamp.second">Sec</span>
                       <select id="ts-picker-second" class="ts-select" onchange="onTimestampPickerTimeChange()"></select>
                     </label>
                   </div>
@@ -187,52 +187,53 @@
               <div id="ts-picker-preview" class="ts-picker-preview">--</div>
 
               <div class="ts-picker-actions">
-                <button class="btn outline small" type="button" onclick="closeTimestampPicker()" data-i18n="common.cancel">取消</button>
-                <button class="btn primary small" type="button" onclick="confirmTimestampPicker()" data-i18n="common.confirm">确定</button>
+                <button class="btn outline small" type="button" onclick="closeTimestampPicker()" data-i18n="common.cancel">Cancel</button>
+                <button class="btn primary small" type="button" onclick="confirmTimestampPicker()" data-i18n="common.confirm">Confirm</button>
               </div>
             </div>
           </div>
-          <div class="ts-value ts-copyable" id="ts-to-ts" onclick="copyTimestampResult('ts-to-ts')" data-i18n-title="timestamp.copyResult" title="点击复制结果">--</div>
+          <div class="ts-value ts-copyable" id="ts-to-ts" onclick="copyTimestampResult('ts-to-ts')" data-i18n-title="timestamp.copyResult" title="Click to copy the result">--</div>
         </div>
         <div class="ts-card">
-          <label class="label" data-i18n="timestamp.timestampToDateLabel">时间戳 → 时间</label>
+          <label class="label" data-i18n="timestamp.timestampToDateLabel">Timestamp &rarr; Time</label>
           <div class="ts-input-group ts-input-group-suffix">
-            <input type="text" id="ts-timestamp" class="ts-input ts-enhanced-input" data-i18n-placeholder="timestamp.inputPlaceholderSeconds" placeholder="输入时间戳（秒）" />
-            <button class="btn outline small ts-inline-trigger" type="button" onclick="openTimestampPicker('timestamp')" data-i18n-title="timestamp.selectTime" data-i18n-aria-label="timestamp.selectTime" title="选择时间" aria-label="选择时间">📅</button>
+            <input type="text" id="ts-timestamp" class="ts-input ts-enhanced-input" data-i18n-placeholder="timestamp.inputPlaceholderSeconds" placeholder="Enter timestamp (seconds)" />
+            <button class="btn outline small ts-inline-trigger" type="button" onclick="openTimestampPicker('timestamp')" data-i18n-title="timestamp.selectTime" data-i18n-aria-label="timestamp.selectTime" title="Select time" aria-label="Select time">📅</button>
           </div>
           <div id="ts-detect-hint" class="ts-hint"></div>
-          <div class="ts-value ts-copyable" id="ts-to-date" onclick="copyTimestampResult('ts-to-date')" data-i18n-title="timestamp.copyResult" title="点击复制结果">--</div>
+          <div class="ts-value ts-copyable" id="ts-to-date" onclick="copyTimestampResult('ts-to-date')" data-i18n-title="timestamp.copyResult" title="Click to copy the result">--</div>
         </div>
       </div>
     </section>
 
     <section id="tool-image" class="tool-panel">
-      <h2 data-i18n="image.title">图片压缩 / 自定义裁剪</h2>
+      <h2 data-i18n="image.title">Image Compress / Custom Crop</h2>
       <div class="img-tool-grid">
         <div class="img-card">
-          <label class="label" for="img-input" data-i18n="image.uploadLabel">上传图片</label>
-          <input type="file" id="img-input" class="img-file-input" accept="image/*" multiple />
-          <div id="img-source-meta" class="img-meta" data-i18n="image.sourceMetaIdle">请选择图片后开始编辑</div>
-          <div id="img-batch-meta" class="img-hint" data-i18n="image.batchMetaIdle">支持点击、拖拽、批量上传图片</div>
+          <label class="label" for="img-input" data-i18n="image.uploadLabel">Upload Images</label>
+          <input type="file" id="img-input" class="sr-file-input" accept="image/*" multiple />
+          <button class="btn primary file-trigger-btn" type="button" onclick="triggerImageInput()" data-i18n="image.selectButton">选择图片</button>
+          <div id="img-source-meta" class="img-meta" data-i18n="image.sourceMetaIdle">Select images to start editing</div>
+          <div id="img-batch-meta" class="img-hint" data-i18n="image.batchMetaIdle">Click, drag, or batch upload images</div>
           <div id="img-queue" class="img-queue">
-            <div class="img-queue-empty" data-i18n="image.queueEmpty">暂无图片。上传后可逐张切换，并为单张图片单独调整裁剪。</div>
+            <div class="img-queue-empty" data-i18n="image.queueEmpty">No images yet. Upload images to switch between them and crop each one separately if needed.</div>
           </div>
           <div class="img-canvas-wrap" id="img-canvas-wrap">
-            <canvas id="img-editor-canvas" class="img-editor-canvas" data-i18n-aria-label="image.canvasAriaLabel" aria-label="图片裁剪编辑区域"></canvas>
-            <div id="img-empty-state" class="img-empty-state" data-i18n="image.emptyState">拖拽图片到这里，或点击上方按钮选择文件。上传后默认按同一裁剪规则处理全部图片。</div>
+            <canvas id="img-editor-canvas" class="img-editor-canvas" data-i18n-aria-label="image.canvasAriaLabel" aria-label="Image crop editor"></canvas>
+            <div id="img-empty-state" class="img-empty-state" data-i18n="image.emptyState">Drag images here or use the upload button above. By default, one crop rule applies to all uploaded images.</div>
           </div>
-          <div class="img-help" data-i18n="image.help">默认所有图片共用同一裁剪规则。你也可以切换到某张图片并勾选“当前图片单独裁剪”。</div>
+          <div class="img-help" data-i18n="image.help">All images share the same crop by default. You can switch to a specific image and enable a custom crop for it only.</div>
           <div class="btn-row">
-            <button class="btn outline" type="button" onclick="resetImageCrop()" data-i18n="image.resetCrop">重置当前裁剪</button>
-            <button class="btn red" type="button" onclick="clearImageTool()" data-i18n="image.clearAll">清空全部</button>
+            <button class="btn outline" type="button" onclick="resetImageCrop()" data-i18n="image.resetCrop">Reset Current Crop</button>
+            <button class="btn red" type="button" onclick="clearImageTool()" data-i18n="image.clearAll">Clear All</button>
           </div>
         </div>
 
         <div class="img-card">
-          <label class="label" data-i18n="image.exportSettings">导出设置</label>
+          <label class="label" data-i18n="image.exportSettings">Export Settings</label>
           <div class="img-control-grid">
             <label class="img-control">
-              <span data-i18n="image.formatLabel">输出格式</span>
+              <span data-i18n="image.formatLabel">Output Format</span>
               <select id="img-format" class="ts-select" onchange="updateImageCompressionSummary()">
                 <option value="jpeg">JPEG</option>
                 <option value="png">PNG</option>
@@ -240,42 +241,42 @@
             </label>
 
             <label class="img-control">
-              <span data-i18n="image.qualityLabel">压缩质量</span>
+              <span data-i18n="image.qualityLabel">Compression Quality</span>
               <input type="range" id="img-quality" class="img-range" min="0.4" max="1" step="0.05" value="0.82" oninput="onImageQualityChange()" />
               <strong id="img-quality-value" class="img-quality-value">82%</strong>
             </label>
 
             <label class="img-control">
-              <span data-i18n="image.widthLabel">输出宽度</span>
-              <input type="number" id="img-max-width" class="ts-input img-number-input" min="1" max="9999" data-i18n-placeholder="image.widthPlaceholder" placeholder="默认按裁剪区宽度" oninput="onImageDimensionInputChange()" />
+              <span data-i18n="image.widthLabel">Output Width</span>
+              <input type="number" id="img-max-width" class="ts-input img-number-input" min="1" max="9999" data-i18n-placeholder="image.widthPlaceholder" placeholder="Default: crop width" oninput="onImageDimensionInputChange()" />
             </label>
 
             <label class="img-control">
-              <span data-i18n="image.heightLabel">输出高度</span>
-              <input type="number" id="img-max-height" class="ts-input img-number-input" min="1" max="9999" data-i18n-placeholder="image.heightPlaceholder" placeholder="默认按裁剪区高度" oninput="onImageDimensionInputChange()" />
+              <span data-i18n="image.heightLabel">Output Height</span>
+              <input type="number" id="img-max-height" class="ts-input img-number-input" min="1" max="9999" data-i18n-placeholder="image.heightPlaceholder" placeholder="Default: crop height" oninput="onImageDimensionInputChange()" />
             </label>
 
             <label class="img-toggle-option">
               <input type="checkbox" id="img-custom-crop-toggle" onchange="toggleActiveImageCustomCrop(this.checked)" />
-              <span data-i18n="image.customCropToggle">当前图片单独裁剪</span>
+              <span data-i18n="image.customCropToggle">Use a custom crop for this image</span>
             </label>
           </div>
 
-          <div id="img-crop-meta" class="img-meta">裁剪区：--</div>
-          <div id="img-export-summary" class="img-hint">裁剪后可压缩导出，并在下方预览结果。</div>
+          <div id="img-crop-meta" class="img-meta" data-i18n="image.cropMetaEmpty">裁剪区：--</div>
+          <div id="img-export-summary" class="img-hint" data-i18n="image.exportSummaryIdle">裁剪后可压缩导出，并在下方预览结果。</div>
 
           <div class="btn-row">
-            <button id="img-generate-btn" class="btn primary" type="button" onclick="generateCompressedImage()">生成当前预览</button>
-            <button id="img-download-btn" class="btn outline" type="button" onclick="downloadCompressedImage()">下载当前</button>
-            <button id="img-download-all-btn" class="btn" type="button" onclick="downloadAllCompressedImages()">批量导出全部</button>
+            <button id="img-generate-btn" class="btn primary" type="button" onclick="generateCompressedImage()" data-i18n="image.generateButton">生成当前预览</button>
+            <button id="img-download-btn" class="btn outline" type="button" onclick="downloadCompressedImage()" data-i18n="image.downloadCurrentButton">下载当前</button>
+            <button id="img-download-all-btn" class="btn" type="button" onclick="downloadAllCompressedImages()" data-i18n="image.downloadAllButton">批量导出全部</button>
           </div>
 
           <div class="img-result-card">
-            <img id="img-result-preview" class="img-result-preview hidden" data-i18n-alt="image.resultPreviewAlt" alt="压缩结果预览" />
-            <div id="img-result-empty" class="img-empty-state img-result-empty" data-i18n="image.resultEmpty">生成后会在这里显示预览</div>
+            <img id="img-result-preview" class="img-result-preview hidden" data-i18n-alt="image.resultPreviewAlt" alt="Compressed result preview" />
+            <div id="img-result-empty" class="img-empty-state img-result-empty" data-i18n="image.resultEmpty">The preview will appear here after generation</div>
           </div>
 
-          <div id="img-result-meta" class="img-meta">结果：--</div>
+          <div id="img-result-meta" class="img-meta" data-i18n="common.resultEmpty">结果：--</div>
         </div>
       </div>
     </section>
@@ -294,7 +295,8 @@
           </select>
 
           <label class="label convert-file-label" for="convert-input" data-i18n="convert.fileLabel">选择文件</label>
-          <input type="file" id="convert-input" class="img-file-input" />
+          <input type="file" id="convert-input" class="sr-file-input" />
+          <button class="btn primary file-trigger-btn" type="button" onclick="triggerConvertInput()" data-i18n="convert.selectButton">选择文件</button>
 
           <div id="convert-file-meta" class="img-meta" data-i18n="convert.fileMetaIdle">请选择需要转换的文件</div>
           <div id="convert-hint" class="img-hint" data-i18n="convert.defaultHint">所有转换都在浏览器本地完成，不会上传到服务器。</div>
@@ -341,8 +343,8 @@
           <div id="convert-dropzone" class="convert-dropzone" data-i18n="convert.dropzone">也可以将文件拖拽到这里上传</div>
 
           <div class="btn-row">
-            <button id="convert-run-btn" class="btn primary" type="button" onclick="runFileConversion()">开始转换</button>
-            <button id="convert-download-btn" class="btn outline" type="button" onclick="downloadFileConversionResult()">下载结果</button>
+            <button id="convert-run-btn" class="btn primary" type="button" onclick="runFileConversion()" data-i18n="convert.runButton">开始转换</button>
+            <button id="convert-download-btn" class="btn outline" type="button" onclick="downloadFileConversionResult()" data-i18n="convert.downloadButton">下载结果</button>
             <button class="btn red" type="button" onclick="clearFileConversion()" data-i18n="common.clear">清空</button>
           </div>
         </div>
@@ -350,7 +352,7 @@
         <div class="convert-card">
           <label class="label" data-i18n="convert.previewLabel">转换结果预览</label>
           <div id="convert-result-preview" class="convert-result-preview" data-i18n="convert.resultPlaceholder">转换结果会显示在这里</div>
-          <div id="convert-result-meta" class="img-meta">结果：--</div>
+          <div id="convert-result-meta" class="img-meta" data-i18n="common.resultEmpty">结果：--</div>
         </div>
       </div>
     </section>

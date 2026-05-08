@@ -15,6 +15,8 @@ if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
 
+
+
 const LOCALE_STORAGE_KEY = 'geek-toolbox-language';
 const SUPPORTED_LANGUAGES = ['zh-CN', 'en'];
 const LANGUAGE_FALLBACKS = {
@@ -102,6 +104,7 @@ const translations = {
       livePanelLabel: '当前时间实时状态',
       currentTimestampLabel: '当前时间戳',
       currentTimeLabel: '当前时间',
+      liveLabel: '实时',
       copyCurrentTimestamp: '点击复制当前时间戳',
       copyCurrentTime: '点击复制当前时间',
       dateToTimestampLabel: '时间 → 时间戳',
@@ -150,6 +153,7 @@ const translations = {
     image: {
       title: '图片压缩 / 自定义裁剪',
       uploadLabel: '上传图片',
+      selectButton: '选择图片',
       sourceMetaIdle: '请选择图片后开始编辑',
       batchMetaIdle: '支持点击、拖拽、批量上传图片',
       queueEmpty: '暂无图片。上传后可逐张切换，并为单张图片单独调整裁剪。',
@@ -187,7 +191,7 @@ const translations = {
       queueBadgeCustom: '单独',
       queueBadgeShared: '共用',
       removeImageAria: '删除 {name}',
-      removeConfirm: `确认删除这张图片吗？\n\n{name}`,
+      removeConfirm: '确认删除这张图片吗？\n\n{name}',
       generateFailedNoBlob: '生成失败：浏览器未能产出图片数据，请重试。',
       generateSuccess: '当前图片预览已生成，可直接下载或继续批量导出。',
       generateFailedGeneric: '生成失败：处理当前图片时出现错误。',
@@ -201,6 +205,7 @@ const translations = {
       title: '文件转换',
       typeLabel: '选择转换类型',
       fileLabel: '选择文件',
+      selectButton: '选择文件',
       fileMetaIdle: '请选择需要转换的文件',
       defaultHint: '所有转换都在浏览器本地完成，不会上传到服务器。',
       previewLabel: '转换结果预览',
@@ -277,7 +282,7 @@ const translations = {
       modalTitle: '❤️ 感谢支持！',
       tabsAriaLabel: '打赏方式',
       cnTab: '国内',
-      intlTab: 'International',
+      intlTab: '国际',
       cnQrText: '支付宝扫码打赏',
       qrAlt: '打赏二维码',
       contactLabel: '也可以联系作者：',
@@ -373,6 +378,7 @@ const translations = {
       livePanelLabel: 'Live current time status',
       currentTimestampLabel: 'Current Timestamp',
       currentTimeLabel: 'Current Time',
+      liveLabel: 'LIVE',
       copyCurrentTimestamp: 'Click to copy the current timestamp',
       copyCurrentTime: 'Click to copy the current time',
       dateToTimestampLabel: 'Time → Timestamp',
@@ -421,6 +427,7 @@ const translations = {
     image: {
       title: 'Image Compress / Custom Crop',
       uploadLabel: 'Upload Images',
+      selectButton: 'Select Images',
       sourceMetaIdle: 'Select images to start editing',
       batchMetaIdle: 'Click, drag, or batch upload images',
       queueEmpty: 'No images yet. Upload images to switch between them and crop each one separately if needed.',
@@ -458,7 +465,7 @@ const translations = {
       queueBadgeCustom: 'Custom',
       queueBadgeShared: 'Shared',
       removeImageAria: 'Remove {name}',
-      removeConfirm: `Remove this image?\n\n{name}`,
+      removeConfirm: 'Remove this image?\n\n{name}',
       generateFailedNoBlob: 'Generation failed: the browser could not create image data. Please try again.',
       generateSuccess: 'Preview generated. You can download it now or continue with batch export.',
       generateFailedGeneric: 'Generation failed while processing the current image.',
@@ -472,6 +479,7 @@ const translations = {
       title: 'File Conversion',
       typeLabel: 'Conversion Type',
       fileLabel: 'Choose File',
+      selectButton: 'Select File',
       fileMetaIdle: 'Select a file to convert',
       defaultHint: 'All conversions run locally in your browser. Nothing is uploaded to a server.',
       previewLabel: 'Result Preview',
@@ -576,16 +584,13 @@ function normalizeLanguage(lang) {
   const lowered = String(lang).toLowerCase();
   if (lowered.startsWith('zh')) return 'zh-CN';
   if (lowered.startsWith('en')) return 'en';
-  return SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
+  return 'en';
 }
 
 function detectPreferredLanguage() {
   try {
     const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
-    if (saved) {
-      const normalizedSaved = normalizeLanguage(saved);
-      if (SUPPORTED_LANGUAGES.includes(normalizedSaved)) return normalizedSaved;
-    }
+    if (SUPPORTED_LANGUAGES.includes(saved)) return saved;
   } catch {}
 
   const browserLang = typeof navigator !== 'undefined' ? navigator.language || navigator.userLanguage : '';
@@ -598,7 +603,7 @@ function t(key, params = {}) {
   const template = getTranslationValue(currentLanguage, key)
     ?? getTranslationValue(LANGUAGE_FALLBACKS[currentLanguage] || 'en', key)
     ?? key;
-  return String(template).replace(/\{(\w+)\}/g, (_, name) => (params[name] ?? `{${name}}`));
+  return String(template).replace(//g, '').replace(/\{(\w+)\}/g, (_, name) => (params[name] ?? `{${name}}`));
 }
 
 function getCurrentLanguage() {
@@ -640,6 +645,21 @@ function applyI18n() {
   });
 }
 
+function refreshLocalizedUI() {
+  applyI18n();
+  if (typeof updateTimestampInputPlaceholder === 'function') updateTimestampInputPlaceholder();
+  if (typeof updateTimestampPickerPreview === 'function') updateTimestampPickerPreview();
+  if (typeof renderTimestampPickerCalendar === 'function') renderTimestampPickerCalendar();
+  if (typeof refreshNow === 'function') refreshNow();
+  if (typeof renderImageQueue === 'function') renderImageQueue();
+  if (typeof syncImageMeta === 'function') syncImageMeta();
+  if (typeof updateImageCompressionSummary === 'function') updateImageCompressionSummary();
+  if (typeof updateImageActionButtons === 'function') updateImageActionButtons();
+  if (typeof restoreConvertHint === 'function') restoreConvertHint(true);
+  if (typeof updateConvertButtons === 'function') updateConvertButtons();
+  if (typeof applySupportLinks === 'function') applySupportLinks();
+}
+
 function setLanguage(lang) {
   const normalized = normalizeLanguage(lang);
   if (!SUPPORTED_LANGUAGES.includes(normalized)) return;
@@ -647,62 +667,9 @@ function setLanguage(lang) {
   try {
     localStorage.setItem(LOCALE_STORAGE_KEY, normalized);
   } catch {}
-  applyI18n();
   refreshLocalizedUI();
 }
 
-function refreshLocalizedUI() {
-  applyI18n();
-  updateTimestampInputPlaceholder();
-  updateTimestampPickerPreview();
-  renderTimestampPickerCalendar();
-  refreshNow();
-
-  const timestampInput = document.getElementById('ts-timestamp');
-  if (timestampInput && timestampInput.value.trim()) {
-    tsToDate();
-  }
-
-  const datetimeInput = document.getElementById('ts-datetime');
-  if (datetimeInput && datetimeInput.value.trim()) {
-    dateToTs();
-  }
-
-  renderImageQueue();
-  syncImageMeta();
-  updateImageCompressionSummary();
-  updateImageActionButtons();
-  if (!imageToolState.resultBlob) {
-    clearImageResult();
-  }
-
-  restoreConvertHint(true);
-  if (fileConvertState.file) {
-    const meta = document.getElementById('convert-file-meta');
-    if (meta) {
-      meta.textContent = t('convert.fileMetaCurrent', {
-        name: fileConvertState.file.name,
-        size: formatBytes(fileConvertState.file.size)
-      });
-    }
-  }
-  if (fileConvertState.resultText) {
-    setConvertResultText(fileConvertState.resultName, fileConvertState.resultText);
-  } else if (fileConvertState.resultImages.length) {
-    setConvertResultImages(fileConvertState.resultImages);
-  } else if (fileConvertState.resultBlob && fileConvertState.resultName) {
-    setConvertResultBlob(
-      fileConvertState.resultName,
-      fileConvertState.resultBlob,
-      fileConvertState.resultPreviewKey ? t(fileConvertState.resultPreviewKey, fileConvertState.resultPreviewParams || {}) : t('convert.resultPlaceholder')
-    );
-  } else {
-    clearFileConversionResult();
-  }
-  updateConvertButtons();
-
-  applySupportLinks();
-}
 
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -1813,6 +1780,11 @@ function onImageInputChange(event) {
   loadFilesIntoImageTool(files);
 }
 
+function triggerImageInput() {
+  const input = document.getElementById('img-input');
+  if (input) input.click();
+}
+
 function onImageDrop(event) {
   event.preventDefault();
   const wrap = document.getElementById('img-canvas-wrap');
@@ -1990,6 +1962,11 @@ async function onConvertFileChange(event) {
   }
 
   updateConvertButtons();
+}
+
+function triggerConvertInput() {
+  const input = document.getElementById('convert-input');
+  if (input) input.click();
 }
 
 function setConvertResultText(name, text) {
