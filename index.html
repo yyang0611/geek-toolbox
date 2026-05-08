@@ -361,6 +361,12 @@
   <footer class="footer">
     <p data-i18n="support.footerNotice">📌 所有处理在浏览器本地完成 · 数据不会上传到服务器 · 纯前端工具</p>
     <p><span data-i18n="support.footerPrompt">如果你觉得有用，</span><a href="#" onclick="showSupport()" data-i18n="support.footerLink">请我喝杯咖啡 ☕</a></p>
+    <p class="footer-feedback">
+      <span data-i18n="support.feedbackLabel">💬 有建议或需求？</span>
+      <a href="https://github.com/yyang0611/geek-toolbox/issues/new" target="_blank" data-i18n="support.feedbackGithub">GitHub Issues</a>
+      <span data-i18n="support.feedbackOr">·</span>
+      <a href="mailto:han998966@gmail.com" data-i18n="support.feedbackEmail">han998966@gmail.com</a>
+    </p>
     <div id="support-modal" class="modal hidden">
       <div class="modal-content">
         <span class="close-btn" onclick="hideSupport()">&times;</span>
@@ -374,7 +380,7 @@
           <p data-i18n="support.cnQrText">支付宝扫码打赏</p>
           <img src="donate.png" data-i18n-alt="support.qrAlt" alt="打赏二维码" class="donation-qr" />
           <div class="support-contact-row">
-            <p class="hint"><span data-i18n="support.contactLabel">也可以联系作者：</span><strong id="support-contact-text">yyang0611</strong></p>
+            <p class="hint"><span data-i18n="support.contactLabel">也可以联系作者：</span><strong id="support-contact-text">yyang0611</strong> / han998966@gmail.com</p>
             <button id="support-contact-copy-btn" class="btn outline small" type="button" onclick="copySupportContact()" data-i18n="support.copyContact">复制联系方式</button>
           </div>
         </div>
@@ -390,6 +396,15 @@
             <p id="kofi-support-text" class="support-link-text">https://ko-fi.com/</p>
           </div>
           <p class="hint" data-i18n="support.intlSetupHint">把上面三个渠道配置成你自己的用户名后，就能直接对外使用。</p>
+          <div class="support-feedback-row" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <p class="hint" style="margin-bottom:8px" data-i18n="support.intlContactHint">📬 反馈建议或合作联系：</p>
+            <div class="support-link-list">
+              <a class="support-link-btn" href="https://github.com/yyang0611/geek-toolbox/issues/new" target="_blank" rel="noreferrer">GitHub Issues</a>
+              <p class="support-link-text">github.com/yyang0611/geek-toolbox/issues/new</p>
+              <a class="support-link-btn support-link-btn-secondary" href="mailto:han998966@gmail.com">han998966@gmail.com</a>
+              <p class="support-link-text">han998966@gmail.com</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

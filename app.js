@@ -313,7 +313,12 @@ const translations = {
       bmacPending: 'Buy Me a Coffee（待配置）',
       bmacMissingText: '未配置 Buy Me a Coffee 用户名',
       kofiPending: 'Ko-fi（待配置）',
-      kofiMissingText: '未配置 Ko-fi 用户名'
+      kofiMissingText: '未配置 Ko-fi 用户名',
+      feedbackLabel: '💬 有建议或需求？',
+      feedbackGithub: 'GitHub Issues',
+      feedbackOr: '·',
+      feedbackEmail: '邮件联系',
+      intlContactHint: '📬 反馈建议或合作联系：'
     }
   },
   en: {
@@ -587,7 +592,12 @@ const translations = {
       bmacPending: 'Buy Me a Coffee (Not configured)',
       bmacMissingText: 'Buy Me a Coffee username not configured',
       kofiPending: 'Ko-fi (Not configured)',
-      kofiMissingText: 'Ko-fi username not configured'
+      kofiMissingText: 'Ko-fi username not configured',
+      feedbackLabel: '💬 Ideas or requests?',
+      feedbackGithub: 'GitHub Issues',
+      feedbackOr: '·',
+      feedbackEmail: 'Email me',
+      intlContactHint: '📬 Feedback or collaboration:'
     }
   }
 };
@@ -3005,7 +3015,7 @@ function switchSupportTab(tab) {
   if (intlPanel) intlPanel.classList.toggle('hidden', isCn);
 }
 function copySupportContact() {
-  const value = supportConfig.contact || '';
+  const value = supportConfig.contact ? supportConfig.contact + ' / han998966@gmail.com' : 'han998966@gmail.com';
   const button = document.getElementById('support-contact-copy-btn');
   if (!value) return;
   writeTextToClipboard(value).then(() => {
