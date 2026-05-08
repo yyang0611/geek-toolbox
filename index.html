@@ -201,15 +201,15 @@
           <div class="color-input-group">
             <label class="color-field">
               <span class="color-field-label">HEX</span>
-              <input type="text" id="color-hex" class="ts-input color-input" value="#6c63ff" oninput="onColorHexInput()" spellcheck="false" />
+              <input type="text" id="color-hex" class="ts-input color-input" value="#6c63ff" oninput="onColorHexInput()" onclick="copyColorValue('color-hex')" spellcheck="false" />
             </label>
             <label class="color-field">
               <span class="color-field-label">RGB</span>
-              <input type="text" id="color-rgb" class="ts-input color-input" value="rgb(108, 99, 255)" oninput="onColorRgbInput()" spellcheck="false" />
+              <input type="text" id="color-rgb" class="ts-input color-input" value="rgb(108, 99, 255)" oninput="onColorRgbInput()" onclick="copyColorValue('color-rgb')" spellcheck="false" />
             </label>
             <label class="color-field">
               <span class="color-field-label">HSL</span>
-              <input type="text" id="color-hsl" class="ts-input color-input" value="hsl(244, 100%, 69%)" oninput="onColorHslInput()" spellcheck="false" />
+              <input type="text" id="color-hsl" class="ts-input color-input" value="hsl(244, 100%, 69%)" oninput="onColorHslInput()" onclick="copyColorValue('color-hsl')" spellcheck="false" />
             </label>
           </div>
           <div class="color-swatches">

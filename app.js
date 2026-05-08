@@ -3487,6 +3487,24 @@ function applyColorSwatch(hex) {
   updateAllColor(hex);
 }
 
+function copyColorValue(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const value = input.value;
+  if (!value) return;
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+
+  navigator.clipboard.writeText(value).then(() => {
+    const originalBg = input.style.background;
+    input.style.background = 'rgba(0, 212, 170, 0.15)';
+    input.style.color = 'var(--accent)';
+    setTimeout(() => {
+      input.style.background = originalBg || '';
+      input.style.color = '';
+    }, 400);
+  }).catch(() => {});
+}
+
 applyI18n();
 onImageQualityChange();
 renderImageQueue();

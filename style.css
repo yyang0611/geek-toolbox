@@ -640,6 +640,10 @@ body {
 .color-input {
   flex: 1;
   font-family: var(--font-mono);
+  cursor: pointer;
+}
+.color-input:focus {
+  cursor: text;
 }
 .color-swatches {
   margin-top: 16px;
