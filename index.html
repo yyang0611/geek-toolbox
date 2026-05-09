@@ -111,11 +111,11 @@
 
     <section id="tool-regex" class="tool-panel">
       <h2 data-i18n="regex.title">Regex Tester</h2>
-      <div class="regex-pattern-section">
+      <div class="regex-panel regex-pattern-section">
         <div class="regex-pattern-row">
-          <span class="regex-delimiter">/</span>
+          <span class="regex-delim">/</span>
           <input type="text" id="regex-pattern" class="ts-input regex-input" data-i18n-placeholder="regex.patternPlaceholder" placeholder="your-regex" spellcheck="false" oninput="runRegexTest()" />
-          <span class="regex-delimiter">/</span>
+          <span class="regex-delim">/</span>
           <select id="regex-flags" class="ts-select regex-flags" onchange="runRegexTest()">
             <option value="gmi">gmi</option>
             <option value="gm">gm</option>
@@ -126,37 +126,26 @@
             <option value="i">i</option>
             <option value="">(none)</option>
           </select>
-          <button class="btn outline small" onclick="clearRegex()" data-i18n="common.clear" title="Clear">✕</button>
+          <div class="regex-badge" id="regex-badge"><span id="regex-count">0</span></div>
+          <button class="btn outline small" onclick="clearRegex()" title="Clear">✕</button>
         </div>
         <div id="regex-error" class="regex-error"></div>
       </div>
 
-      <div class="regex-body">
-        <div class="regex-section">
-          <div class="regex-section-header">
-            <label class="label" data-i18n="regex.testLabel">Test String</label>
-            <span class="regex-badge" id="regex-badge">
-              <span id="regex-count">0</span> <span data-i18n="regex.matchCount">matches</span>
-            </span>
-          </div>
-          <textarea id="regex-test" class="code-input regex-test-input" data-i18n-placeholder="regex.testPlaceholder" placeholder="Enter test string..." spellcheck="false" oninput="runRegexTest()"></textarea>
-        </div>
+      <div class="regex-panel regex-test-panel">
+        <label class="label" data-i18n="regex.testLabel">Test Text</label>
+        <textarea id="regex-test" class="code-input regex-test-input" data-i18n-placeholder="regex.testPlaceholder" placeholder="Enter test string..." spellcheck="false" oninput="runRegexTest()"></textarea>
+      </div>
 
-        <div class="regex-section">
-          <div class="regex-section-header">
-            <label class="label" data-i18n="regex.replaceLabel">Replace</label>
-            <div class="regex-mode-toggle">
-              <button id="regex-mode-match" class="regex-mode-btn active" onclick="setRegexMode('match')" data-i18n="regex.modeMatch">Match</button>
-              <button id="regex-mode-replace" class="regex-mode-btn" onclick="setRegexMode('replace')" data-i18n="regex.modeReplace">Replace</button>
-            </div>
-          </div>
-          <div id="regex-replace-wrap" class="regex-replace-wrap hidden">
-            <input type="text" id="regex-replace" class="ts-input regex-replace-input" data-i18n-placeholder="regex.replacePlaceholder" placeholder="Replacement text..." oninput="runRegexTest()" />
-          </div>
-          <div class="regex-output-wrap" id="regex-output-wrap">
-            <pre id="regex-output" class="code-output regex-output"></pre>
-          </div>
-        </div>
+      <div class="regex-panel regex-mode-bar">
+        <button id="regex-mode-match" class="regex-mode-btn active" onclick="setRegexMode('match')" data-i18n="regex.modeMatch">Match</button>
+        <button id="regex-mode-replace" class="regex-mode-btn" onclick="setRegexMode('replace')" data-i18n="regex.modeReplace">Replace</button>
+        <input type="text" id="regex-replace" class="ts-input regex-replace-input" data-i18n-placeholder="regex.replacePlaceholder" placeholder="Replacement text..." oninput="runRegexTest()" />
+      </div>
+
+      <div class="regex-panel regex-output-panel">
+        <label class="label" data-i18n="yaml.outputLabel">Output</label>
+        <pre id="regex-output" class="code-output regex-output"></pre>
       </div>
     </section>
 
@@ -210,24 +199,77 @@
           <label class="label" data-i18n="color.pickerLabel">Pick a Color</label>
           <div class="color-picker-row">
             <input type="color" id="color-picker" class="color-picker-input" value="#6c63ff" oninput="onColorPickerChange()" />
-            <div class="color-preview-large" id="color-preview-large" style="background:#6c63ff"></div>
+            <div class="color-preview-large" id="color-preview-large" style="background:rgba(108,99,255,1)"></div>
+            <button id="color-eyedropper" class="btn outline color-eyedropper-btn" onclick="pickScreenColor()" title="Pick color from screen" data-i18n-title="color.eyeDrop">👁️</button>
+          </div>
+          <div class="color-alpha-panel">
+            <div class="color-alpha-header">
+              <label class="label" for="color-alpha-range" data-i18n="color.alphaLabel">Transparency</label>
+              <span id="color-alpha-percent" class="color-alpha-percent">100%</span>
+            </div>
+            <div class="color-alpha-controls">
+              <input type="range" id="color-alpha-range" class="color-alpha-range" min="0" max="100" step="1" value="100" oninput="onColorAlphaChange()" />
+              <div class="color-alpha-number-wrap">
+                <input type="text" id="color-alpha-number" class="ts-input color-alpha-number" value="100" oninput="onColorAlphaNumberInput()" />
+                <span class="color-alpha-unit">%</span>
+              </div>
+            </div>
+            <div class="color-alpha-presets">
+              <button class="btn outline small color-alpha-preset" type="button" onclick="setColorAlphaPreset(100)">100%</button>
+              <button class="btn outline small color-alpha-preset" type="button" onclick="setColorAlphaPreset(75)">75%</button>
+              <button class="btn outline small color-alpha-preset" type="button" onclick="setColorAlphaPreset(50)">50%</button>
+              <button class="btn outline small color-alpha-preset" type="button" onclick="setColorAlphaPreset(25)">25%</button>
+              <button class="btn outline small color-alpha-preset" type="button" onclick="setColorAlphaPreset(0)">0%</button>
+            </div>
           </div>
         </div>
-        <div class="color-card">
+        <div class="color-card color-values-card">
           <label class="label" data-i18n="color.manualLabel">Or Enter Value</label>
+          <p class="color-copy-hint" data-i18n="color.copyHint">Click any value below to copy with the same feedback as timestamp results</p>
           <div class="color-input-group">
             <label class="color-field">
               <span class="color-field-label">HEX</span>
-              <input type="text" id="color-hex" class="ts-input color-input" value="#6c63ff" oninput="onColorHexInput()" onclick="copyColorValue('color-hex')" spellcheck="false" />
+              <input type="text" id="color-hex" class="ts-input color-input" value="#6c63ffff" oninput="onColorHexInput()" spellcheck="false" />
+              <span id="color-hex-display" class="color-value-display ts-copyable" onclick="copyColorValue('color-hex')" title="Click to copy" data-i18n-title="color.copyTitle">#6c63ffff</span>
             </label>
             <label class="color-field">
               <span class="color-field-label">RGB</span>
-              <input type="text" id="color-rgb" class="ts-input color-input" value="rgb(108, 99, 255)" oninput="onColorRgbInput()" onclick="copyColorValue('color-rgb')" spellcheck="false" />
+              <input type="text" id="color-rgb" class="ts-input color-input" value="rgba(108, 99, 255, 1)" oninput="onColorRgbInput()" spellcheck="false" />
+              <span id="color-rgb-display" class="color-value-display ts-copyable" onclick="copyColorValue('color-rgb')" title="Click to copy" data-i18n-title="color.copyTitle">rgba(108, 99, 255, 1)</span>
             </label>
             <label class="color-field">
               <span class="color-field-label">HSL</span>
-              <input type="text" id="color-hsl" class="ts-input color-input" value="hsl(244, 100%, 69%)" oninput="onColorHslInput()" onclick="copyColorValue('color-hsl')" spellcheck="false" />
+              <input type="text" id="color-hsl" class="ts-input color-input" value="hsla(244, 100%, 69%, 1)" oninput="onColorHslInput()" spellcheck="false" />
+              <span id="color-hsl-display" class="color-value-display ts-copyable" onclick="copyColorValue('color-hsl')" title="Click to copy" data-i18n-title="color.copyTitle">hsla(244, 100%, 69%, 1)</span>
             </label>
+          </div>
+          <div id="color-input-error" class="color-input-error"></div>
+          <div class="btn-row color-copy-actions">
+            <button id="color-copy-all-btn" class="btn outline small" type="button" onclick="copyAllColorValues()" data-i18n="color.copyAll">复制全部</button>
+          </div>
+          <div class="color-history">
+            <div class="color-history-header">
+              <span class="color-swatch-label" data-i18n="color.historyLabel">Recent</span>
+              <button id="color-history-clear-btn" class="btn outline small" type="button" onclick="clearColorHistory()" data-i18n="color.clearHistory">清空历史</button>
+            </div>
+            <div id="color-history-row" class="color-swatch-row color-history-row"></div>
+          </div>
+          <div class="color-schemes">
+            <div class="color-history-header">
+              <span class="color-swatch-label" data-i18n="color.schemesLabel">Schemes</span>
+            </div>
+            <div class="color-scheme-group">
+              <span class="color-scheme-title" data-i18n="color.schemeComplementary">Complementary</span>
+              <div id="color-scheme-complementary" class="color-swatch-row color-scheme-row"></div>
+            </div>
+            <div class="color-scheme-group">
+              <span class="color-scheme-title" data-i18n="color.schemeAnalogous">Analogous</span>
+              <div id="color-scheme-analogous" class="color-swatch-row color-scheme-row"></div>
+            </div>
+            <div class="color-scheme-group">
+              <span class="color-scheme-title" data-i18n="color.schemeTriadic">Triadic</span>
+              <div id="color-scheme-triadic" class="color-swatch-row color-scheme-row"></div>
+            </div>
           </div>
           <div class="color-swatches">
             <span class="color-swatch-label" data-i18n="color.swatchesLabel">Palette</span>
@@ -531,15 +573,21 @@
         <div id="support-panel-intl" class="support-panel hidden" role="tabpanel" aria-labelledby="support-tab-intl">
           <p class="hint" data-i18n="support.intlHint">如果对方没有支付宝，建议使用下面的国际打赏方式：</p>
           <div class="support-link-list">
-            <a id="paypal-support-link" class="support-link-btn" href="https://www.paypal.com/paypalme/" target="_blank" rel="noreferrer">PayPal</a>
-            <p id="paypal-support-text" class="support-link-text">https://www.paypal.com/paypalme/</p>
-            <a id="bmac-support-link" class="support-link-btn support-link-btn-secondary" href="https://buymeacoffee.com/" target="_blank" rel="noreferrer">Buy Me a Coffee</a>
-            <p id="bmac-support-text" class="support-link-text">https://buymeacoffee.com/</p>
-            <a id="kofi-support-link" class="support-link-btn support-link-btn-tertiary" href="https://ko-fi.com/" target="_blank" rel="noreferrer">Ko-fi</a>
-            <p id="kofi-support-text" class="support-link-text">https://ko-fi.com/</p>
+            <div id="paypal-support-group" class="support-link-group">
+              <a id="paypal-support-link" class="support-link-btn" href="https://www.paypal.com/paypalme/" target="_blank" rel="noreferrer">PayPal</a>
+              <p id="paypal-support-text" class="support-link-text">https://www.paypal.com/paypalme/</p>
+            </div>
+            <div id="bmac-support-group" class="support-link-group">
+              <a id="bmac-support-link" class="support-link-btn support-link-btn-secondary" href="https://buymeacoffee.com/" target="_blank" rel="noreferrer">Buy Me a Coffee</a>
+              <p id="bmac-support-text" class="support-link-text">https://buymeacoffee.com/</p>
+            </div>
+            <div id="kofi-support-group" class="support-link-group">
+              <a id="kofi-support-link" class="support-link-btn support-link-btn-tertiary" href="https://ko-fi.com/" target="_blank" rel="noreferrer">Ko-fi</a>
+              <p id="kofi-support-text" class="support-link-text">https://ko-fi.com/</p>
+            </div>
           </div>
-          <p class="hint" data-i18n="support.intlSetupHint">把上面三个渠道配置成你自己的用户名后，就能直接对外使用。</p>
-          <div class="support-feedback-row" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+          <p id="support-intl-setup-hint" class="hint hidden" data-i18n="support.intlSetupHint">把上面三个渠道配置成你自己的用户名后，就能直接对外使用。</p>
+<div class="support-feedback-row" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
             <p class="hint" style="margin-bottom:8px" data-i18n="support.intlContactHint">📬 反馈建议或合作联系：</p>
             <div class="support-link-list">
               <a class="support-link-btn" href="https://github.com/yyang0611/geek-toolbox/issues/new" target="_blank" rel="noreferrer">GitHub Issues</a>
