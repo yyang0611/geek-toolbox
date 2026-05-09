@@ -125,11 +125,13 @@ const translations = {
       patternPlaceholder: '/你的正则/',
       testLabel: '测试文本',
       testPlaceholder: '输入测试字符串...',
-      matchCount: '匹配：',
+      matchCount: '匹配',
       replaceLabel: '替换为：',
       replacePlaceholder: '替换文本...',
       noMatch: '(无匹配)',
-      error: '❌ 正则错误: {message}'
+      error: '❌ 正则错误: {message}',
+      modeMatch: '匹配',
+      modeReplace: '替换'
     },
     jwt: {
       title: 'JWT 解码器',
@@ -158,9 +160,16 @@ const translations = {
     },
     color: {
       title: '颜色转换器',
-      pickerLabel: '取色',
+      pickerLabel: '选择颜色',
       manualLabel: '或输入颜色值',
-      swatchesLabel: '色板'
+      swatchesLabel: '色板',
+      eyeDrop: '从屏幕取色',
+      copy: '复制',
+      copied: '已复制！',
+      currentLabel: '当前颜色：',
+      alphaLabel: '透明度',
+      copyHint: '点击下方任意格式即可复制，反馈与时间戳工具一致',
+      copyTitle: '点击复制'
     },
     timestamp: {
       title: '时间戳转换',
@@ -451,11 +460,13 @@ const translations = {
       patternPlaceholder: '/your-regex/',
       testLabel: 'Test String',
       testPlaceholder: 'Enter test string...',
-      matchCount: 'Matches: ',
+      matchCount: 'matches',
       replaceLabel: 'Replace: ',
       replacePlaceholder: 'Replacement text...',
       noMatch: '(no match)',
-      error: '❌ Regex error: {message}'
+      error: '❌ Regex error: {message}',
+      modeMatch: 'Match',
+      modeReplace: 'Replace'
     },
     jwt: {
       title: 'JWT Decoder',
@@ -486,7 +497,24 @@ const translations = {
       title: 'Color Converter',
       pickerLabel: 'Pick a Color',
       manualLabel: 'Or Enter Value',
-      swatchesLabel: 'Palette'
+      swatchesLabel: 'Palette',
+      eyeDrop: 'Pick color from screen',
+      copy: 'Copy',
+      copied: 'Copied!',
+      currentLabel: 'Current: ',
+      alphaLabel: 'Transparency',
+      copyHint: 'Click any value below to copy with the same feedback as timestamp results',
+      copyTitle: 'Click to copy',
+      copyAll: 'Copy All',
+      historyLabel: 'Recent',
+      clearHistory: 'Clear History',
+      invalidHex: 'Invalid HEX / HEXA format',
+      invalidRgb: 'Invalid RGB / RGBA format',
+      invalidHsl: 'Invalid HSL / HSLA format',
+      schemesLabel: 'Schemes',
+      schemeComplementary: 'Complementary',
+      schemeAnalogous: 'Analogous',
+      schemeTriadic: 'Triadic'
     },
     timestamp: {
       title: 'Timestamp Converter',
@@ -2791,12 +2819,16 @@ function updateTimestampDetectHint(message = '') {
 
 function flashCopiedState(element, originalText) {
   if (!element) return;
+  if (element._copiedTimer) {
+    clearTimeout(element._copiedTimer);
+  }
   element.classList.add('copied');
   element.dataset.originalText = originalText;
   element.textContent = t('common.copied');
-  setTimeout(() => {
+  element._copiedTimer = setTimeout(() => {
     element.classList.remove('copied');
     element.textContent = element.dataset.originalText || originalText;
+    element._copiedTimer = null;
   }, 1200);
 }
 
@@ -3039,10 +3071,14 @@ function applySupportLinks() {
   const contactText = document.getElementById('support-contact-text');
   const paypalLink = document.getElementById('paypal-support-link');
   const paypalText = document.getElementById('paypal-support-text');
+  const paypalGroup = document.getElementById('paypal-support-group');
   const bmacLink = document.getElementById('bmac-support-link');
   const bmacText = document.getElementById('bmac-support-text');
+  const bmacGroup = document.getElementById('bmac-support-group');
   const kofiLink = document.getElementById('kofi-support-link');
   const kofiText = document.getElementById('kofi-support-text');
+  const kofiGroup = document.getElementById('kofi-support-group');
+  const intlSetupHint = document.getElementById('support-intl-setup-hint');
 
   const hasPayPal = Boolean(supportConfig.paypalUsername);
   const hasBmac = Boolean(supportConfig.buyMeACoffeeUsername);
@@ -3055,37 +3091,44 @@ function applySupportLinks() {
     contactText.textContent = supportConfig.contact || t('common.notSet');
   }
 
+  if (paypalGroup) paypalGroup.classList.toggle('hidden', !hasPayPal);
   if (paypalLink) {
-    paypalLink.href = hasPayPal ? paypalUrl : '#';
-    paypalLink.textContent = hasPayPal ? t('support.paypalConfigured') : t('support.paypalPending');
-    paypalLink.classList.toggle('is-disabled', !hasPayPal);
-    paypalLink.setAttribute('aria-disabled', hasPayPal ? 'false' : 'true');
-    paypalLink.tabIndex = hasPayPal ? 0 : -1;
+    paypalLink.href = paypalUrl;
+    paypalLink.textContent = t('support.paypalConfigured');
+    paypalLink.classList.remove('is-disabled');
+    paypalLink.setAttribute('aria-disabled', 'false');
+    paypalLink.tabIndex = 0;
   }
   if (paypalText) {
-    paypalText.textContent = hasPayPal ? paypalUrl : t('support.paypalMissingText');
+    paypalText.textContent = paypalUrl;
   }
 
-  if (bmacLink) {
-    bmacLink.href = hasBmac ? bmacUrl : '#';
-    bmacLink.textContent = hasBmac ? 'Buy Me a Coffee' : t('support.bmacPending');
-    bmacLink.classList.toggle('is-disabled', !hasBmac);
-    bmacLink.setAttribute('aria-disabled', hasBmac ? 'false' : 'true');
-    bmacLink.tabIndex = hasBmac ? 0 : -1;
+  if (bmacGroup) bmacGroup.classList.toggle('hidden', !hasBmac);
+  if (bmacLink && hasBmac) {
+    bmacLink.href = bmacUrl;
+    bmacLink.textContent = 'Buy Me a Coffee';
+    bmacLink.classList.remove('is-disabled');
+    bmacLink.setAttribute('aria-disabled', 'false');
+    bmacLink.tabIndex = 0;
   }
-  if (bmacText) {
-    bmacText.textContent = hasBmac ? bmacUrl : t('support.bmacMissingText');
+  if (bmacText && hasBmac) {
+    bmacText.textContent = bmacUrl;
   }
 
-  if (kofiLink) {
-    kofiLink.href = hasKoFi ? kofiUrl : '#';
-    kofiLink.textContent = hasKoFi ? 'Ko-fi' : t('support.kofiPending');
-    kofiLink.classList.toggle('is-disabled', !hasKoFi);
-    kofiLink.setAttribute('aria-disabled', hasKoFi ? 'false' : 'true');
-    kofiLink.tabIndex = hasKoFi ? 0 : -1;
+  if (kofiGroup) kofiGroup.classList.toggle('hidden', !hasKoFi);
+  if (kofiLink && hasKoFi) {
+    kofiLink.href = kofiUrl;
+    kofiLink.textContent = 'Ko-fi';
+    kofiLink.classList.remove('is-disabled');
+    kofiLink.setAttribute('aria-disabled', 'false');
+    kofiLink.tabIndex = 0;
   }
-  if (kofiText) {
-    kofiText.textContent = hasKoFi ? kofiUrl : t('support.kofiMissingText');
+  if (kofiText && hasKoFi) {
+    kofiText.textContent = kofiUrl;
+  }
+
+  if (intlSetupHint) {
+    intlSetupHint.classList.add('hidden');
   }
 }
 
@@ -3205,11 +3248,27 @@ window.addEventListener('resize', () => {
 applySupportLinks();
 
 /* ===== Regex Tester ===== */
+let _regexMode = 'match';
+
+function setRegexMode(mode) {
+  _regexMode = mode;
+  const matchBtn = document.getElementById('regex-mode-match');
+  const replaceBtn = document.getElementById('regex-mode-replace');
+  const replaceInput = document.getElementById('regex-replace');
+  if (matchBtn) matchBtn.classList.toggle('active', mode === 'match');
+  if (replaceBtn) replaceBtn.classList.toggle('active', mode === 'replace');
+  if (replaceInput) {
+    replaceInput.style.display = mode === 'replace' ? '' : 'none';
+  }
+  runRegexTest();
+}
+
 function runRegexTest() {
   const patternInput = document.getElementById('regex-pattern');
   const testInput = document.getElementById('regex-test');
   const output = document.getElementById('regex-output');
   const count = document.getElementById('regex-count');
+  const badge = document.getElementById('regex-badge');
   const error = document.getElementById('regex-error');
   const flags = document.getElementById('regex-flags');
   const replaceInput = document.getElementById('regex-replace');
@@ -3220,39 +3279,78 @@ function runRegexTest() {
   const flagStr = flags ? flags.value : 'g';
   const replaceStr = replaceInput ? replaceInput.value : '';
   error.textContent = '';
+  if (badge) badge.classList.remove('has-matches', 'has-error');
 
   if (!pattern) {
-    output.textContent = '';
+    output.innerHTML = '';
     count.textContent = '0';
     return;
   }
 
   try {
     const regex = new RegExp(pattern, flagStr);
-    if (replaceStr) {
+
+    if (_regexMode === 'replace') {
       const replaced = testStr.replace(regex, replaceStr);
-      output.textContent = replaced;
       if (testStr !== replaced) {
+        output.innerHTML = `<span class="replaced-text">${escapeHtml(replaced)}</span>`;
         count.textContent = '✓';
+        if (badge) badge.classList.add('has-matches');
       } else {
+        output.innerHTML = `<span class="replaced-text">${escapeHtml(testStr)}</span>` +
+          '<br><span class="no-match" style="color:var(--text-dim);font-size:0.85em">' + t('regex.noMatch') + '</span>';
         count.textContent = '0';
-        if (!output.textContent) output.textContent = t('regex.noMatch');
       }
     } else {
       const matches = testStr.match(regex);
-      if (matches) {
-        output.textContent = matches.map((m, i) => `[${i}] "${m}"`).join('\n');
+      if (matches && matches.length) {
+        const hasGroups = matches.length > 1 && matches[0] !== matches.input;
+        if (hasGroups) {
+          // If regex has groups, show group details
+          let html = '';
+          let idx = 0;
+          let match;
+          while ((match = regex.exec(testStr)) !== null) {
+            const full = match[0];
+            const groups = match.slice(1);
+            html += `<span class="match-item"><span class="match-index">#${idx}</span>`;
+            html += `<span class="match-text">"${escapeHtml(full)}"</span>`;
+            if (groups.length) {
+              html += groups.map((g, gi) => g !== undefined
+                ? ` <span class="match-group" style="color:var(--text-dim);font-size:0.85em">group ${gi+1}: "${escapeHtml(g)}"</span>`
+                : '').join('');
+            }
+            html += '</span>';
+            idx++;
+            if (regex.lastIndex === match.index) regex.lastIndex++;
+            if (idx > 200) break;
+          }
+          output.innerHTML = html;
+        } else {
+          // Simple matches list
+          output.innerHTML = matches.map((m, i) =>
+            `<span class="match-item"><span class="match-index">#${i}</span><span class="match-text">"${escapeHtml(m)}"</span></span>`
+          ).join('');
+        }
         count.textContent = String(matches.length);
+        if (badge) badge.classList.add('has-matches');
       } else {
-        output.textContent = t('regex.noMatch');
+        output.innerHTML = `<span style="color:var(--text-dim)">${t('regex.noMatch')}</span>`;
         count.textContent = '0';
       }
     }
   } catch (e) {
     error.textContent = t('regex.error', { message: e.message });
-    output.textContent = '';
+    if (badge) badge.classList.add('has-error');
+    output.innerHTML = '';
     count.textContent = '0';
   }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 function clearRegex() {
@@ -3261,6 +3359,8 @@ function clearRegex() {
   if (el('regex-test')) el('regex-test').value = '';
   if (el('regex-replace')) el('regex-replace').value = '';
   if (el('regex-flags')) el('regex-flags').value = 'gmi';
+  _regexMode = 'match';
+  setRegexMode('match');
   runRegexTest();
 }
 
@@ -3393,9 +3493,122 @@ function clearYaml() {
 }
 
 /* ===== Color Converter ===== */
+const COLOR_HISTORY_STORAGE_KEY = 'geek-toolbox-color-history';
+
+const colorState = {
+  hex: '#6c63ff',
+  alpha: 1,
+  history: []
+};
+
+const colorDom = {
+  error: null,
+  alphaRange: null,
+  alphaNumber: null,
+  alphaPercent: null,
+  historyRow: null,
+  picker: null,
+  preview: null,
+  hexInput: null,
+  rgbInput: null,
+  hslInput: null,
+  hexDisplay: null,
+  rgbDisplay: null,
+  hslDisplay: null,
+  copyAllButton: null,
+  eyedropperButton: null
+};
+
+function getColorDom() {
+  colorDom.error = colorDom.error || document.getElementById('color-input-error');
+  colorDom.alphaRange = colorDom.alphaRange || document.getElementById('color-alpha-range');
+  colorDom.alphaNumber = colorDom.alphaNumber || document.getElementById('color-alpha-number');
+  colorDom.alphaPercent = colorDom.alphaPercent || document.getElementById('color-alpha-percent');
+  colorDom.historyRow = colorDom.historyRow || document.getElementById('color-history-row');
+  colorDom.picker = colorDom.picker || document.getElementById('color-picker');
+  colorDom.preview = colorDom.preview || document.getElementById('color-preview-large');
+  colorDom.hexInput = colorDom.hexInput || document.getElementById('color-hex');
+  colorDom.rgbInput = colorDom.rgbInput || document.getElementById('color-rgb');
+  colorDom.hslInput = colorDom.hslInput || document.getElementById('color-hsl');
+  colorDom.hexDisplay = colorDom.hexDisplay || document.getElementById('color-hex-display');
+  colorDom.rgbDisplay = colorDom.rgbDisplay || document.getElementById('color-rgb-display');
+  colorDom.hslDisplay = colorDom.hslDisplay || document.getElementById('color-hsl-display');
+  colorDom.copyAllButton = colorDom.copyAllButton || document.getElementById('color-copy-all-btn');
+  colorDom.eyedropperButton = colorDom.eyedropperButton || document.getElementById('color-eyedropper');
+  return colorDom;
+}
+
+
+function clampColorChannel(value) {
+  return Math.min(255, Math.max(0, Math.round(Number(value) || 0)));
+}
+
+function clampAlpha(value) {
+  const alpha = Number(value);
+  if (!Number.isFinite(alpha)) return 1;
+  return Math.min(1, Math.max(0, alpha));
+}
+
+function parseAlphaInput(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return colorState.alpha;
+  const normalized = raw.endsWith('%') ? raw.slice(0, -1).trim() : raw;
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric)) return colorState.alpha;
+  if (raw.endsWith('%') || numeric > 1) return clampAlpha(numeric / 100);
+  return clampAlpha(numeric);
+}
+
+function alphaToHex(alpha) {
+  return Math.round(clampAlpha(alpha) * 255).toString(16).padStart(2, '0');
+}
+
+function formatAlpha(alpha) {
+  const normalized = clampAlpha(alpha);
+  const rounded = Math.round(normalized * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toString();
+}
+function showColorInputError(message) {
+  const { error } = getColorDom();
+  if (error) error.textContent = message || '';
+}
+
+function clearColorInputError() {
+  showColorInputError('');
+}
+
+function persistColorHistory() {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(COLOR_HISTORY_STORAGE_KEY, JSON.stringify(colorState.history));
+    }
+  } catch {}
+}
+
+function loadColorHistory() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem(COLOR_HISTORY_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      colorState.history = parsed.filter(item => typeof item === 'string').slice(0, 8);
+    }
+  } catch {}
+}
+
 function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+  let normalized = String(hex || '').trim().replace(/^#/, '');
+  if (![3, 4, 6, 8].includes(normalized.length) || !/^[0-9a-f]+$/i.test(normalized)) return null;
+  if (normalized.length === 3 || normalized.length === 4) {
+    normalized = normalized.split('').map(ch => ch + ch).join('');
+  }
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+    a: normalized.length === 8 ? parseInt(normalized.slice(6, 8), 16) / 255 : 1
+  };
 }
 
 function rgbToHsl(r, g, b) {
@@ -3426,85 +3639,250 @@ function hslToRgb(h, s, l) {
   };
   return { r: f(0), g: f(8), b: f(4) };
 }
-
-function rgbToHex(r, g, b) {
-  return '#' + [r, g, b].map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+function normalizeHue(hue) {
+  return ((Math.round(hue) % 360) + 360) % 360;
 }
 
-function updateAllColor(hex) {
+function createSchemeHexFromHsl(baseHsl, hueShift) {
+  const rgb = hslToRgb(normalizeHue(baseHsl.h + hueShift), baseHsl.s, baseHsl.l);
+  return rgbToHex(rgb.r, rgb.g, rgb.b);
+}
+
+function renderColorSchemeRow(elementId, colors) {
+  const row = document.getElementById(elementId);
+  if (!row) return;
+  row.innerHTML = colors.map(hex => `<button class="color-swatch" style="background:${hex}" onclick="applyColorSwatch('${hex}')" title="${hex}"></button>`).join('');
+}
+
+function renderColorSchemes() {
+  const rgb = hexToRgb(colorState.hex);
+  if (!rgb) return;
+  const baseHsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  renderColorSchemeRow('color-scheme-complementary', [createSchemeHexFromHsl(baseHsl, 180)]);
+  renderColorSchemeRow('color-scheme-analogous', [createSchemeHexFromHsl(baseHsl, -30), colorState.hex, createSchemeHexFromHsl(baseHsl, 30)]);
+  renderColorSchemeRow('color-scheme-triadic', [createSchemeHexFromHsl(baseHsl, 120), colorState.hex, createSchemeHexFromHsl(baseHsl, -120)]);
+}
+
+function rgbToHex(r, g, b, a = 1) {
+  const base = '#' + [r, g, b].map(x => clampColorChannel(x).toString(16).padStart(2, '0')).join('');
+  return clampAlpha(a) >= 1 ? base : base + alphaToHex(a);
+}
+
+function parseRgbLikeInput(value) {
+  const match = String(value || '').trim().match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*((?:\d*\.\d+)|\d+)\s*)?\)/i);
+  if (!match) return null;
+  return {
+    r: clampColorChannel(match[1]),
+    g: clampColorChannel(match[2]),
+    b: clampColorChannel(match[3]),
+    a: clampAlpha(match[4] == null ? 1 : match[4])
+  };
+}
+
+function parseHslLikeInput(value) {
+  const match = String(value || '').trim().match(/hsla?\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*(?:,\s*((?:\d*\.\d+)|\d+)\s*)?\)/i);
+  if (!match) return null;
+  const rgb = hslToRgb(parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10));
+  return {
+    r: rgb.r,
+    g: rgb.g,
+    b: rgb.b,
+    a: clampAlpha(match[4] == null ? 1 : match[4])
+  };
+}
+
+function updateColorAlphaUI(alpha) {
+  const percent = Math.round(clampAlpha(alpha) * 100);
+  const { alphaRange, alphaNumber, alphaPercent } = getColorDom();
+  if (alphaRange) alphaRange.value = String(percent);
+  if (alphaNumber) alphaNumber.value = String(percent);
+  if (alphaPercent) alphaPercent.textContent = `${percent}%`;
+}
+function updateColorHistory(hex, alpha) {
+  const entry = hex.toLowerCase() + '|' + Math.round(clampAlpha(alpha) * 100);
+  colorState.history = [entry].concat(colorState.history.filter(item => item !== entry)).slice(0, 8);
+  persistColorHistory();
+  renderColorHistory();
+}
+
+function clearColorHistory() {
+  colorState.history = [];
+  persistColorHistory();
+  renderColorHistory();
+}
+
+function renderColorHistory() {
+  const { historyRow: row } = getColorDom();
+  if (!row) return;
+  if (!colorState.history.length) {
+    row.innerHTML = '<span class="color-history-empty">--</span>';
+    return;
+  }
+  row.innerHTML = colorState.history.map(item => {
+    const parts = item.split('|');
+    const hex = parts[0];
+    const alpha = Math.min(100, Math.max(0, Number(parts[1]) || 100));
+    const rgba = hexToRgb(hex);
+    const fill = rgba ? 'rgba(' + rgba.r + ', ' + rgba.g + ', ' + rgba.b + ', ' + (alpha / 100) + ')' : hex;
+    return '<button class="color-swatch" style="background:' + fill + '" onclick="applyColorHistory(\'' + hex + '\', ' + alpha + ')" title="' + hex + ' / ' + alpha + '%"></button>';
+  }).join('');
+}
+
+function applyColorHistory(hex, alphaPercent) {
+  updateAllColor(hex, alphaPercent / 100);
+}
+
+function setColorAlphaPreset(percent) {
+  updateAllColor(colorState.hex, percent / 100);
+}
+
+function updateAllColor(hex, alpha = colorState.alpha) {
   const rgb = hexToRgb(hex);
   if (!rgb) return;
+  clearColorInputError();
+
+  const effectiveAlpha = clampAlpha(alpha != null ? alpha : rgb.a);
+  colorState.hex = '#' + String(hex).trim().replace(/^#/, '').slice(0, 6).toLowerCase();
+  colorState.alpha = effectiveAlpha;
+
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const { hexInput, rgbInput, hslInput, picker, preview, hexDisplay, rgbDisplay, hslDisplay } = getColorDom();
+  const hexVal = rgbToHex(rgb.r, rgb.g, rgb.b, effectiveAlpha).toLowerCase();
+  const alphaText = formatAlpha(effectiveAlpha);
+  const rgbVal = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alphaText})`;
+  const hslVal = `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, ${alphaText})`;
 
-  const hexInput = document.getElementById('color-hex');
-  const rgbInput = document.getElementById('color-rgb');
-  const hslInput = document.getElementById('color-hsl');
-  const picker = document.getElementById('color-picker');
-  const preview = document.getElementById('color-preview-large');
+  if (hexInput) hexInput.value = hexVal;
+  if (rgbInput) rgbInput.value = rgbVal;
+  if (hslInput) hslInput.value = hslVal;
+  if (hexDisplay) hexDisplay.textContent = hexVal;
+  if (rgbDisplay) rgbDisplay.textContent = rgbVal;
+  if (hslDisplay) hslDisplay.textContent = hslVal;
+  if (picker) picker.value = colorState.hex;
+  if (preview) preview.style.setProperty('--color-preview-fill', rgbVal);
 
-  if (hexInput) hexInput.value = hex.toLowerCase();
-  if (rgbInput) rgbInput.value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
-  if (hslInput) hslInput.value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
-  if (picker) picker.value = hex.substring(0, 7);
-  if (preview) preview.style.background = hex;
+  updateColorAlphaUI(effectiveAlpha);
+  updateColorHistory(colorState.hex, effectiveAlpha);
+  renderColorSchemes();
 }
 
 function onColorPickerChange() {
-  const picker = document.getElementById('color-picker');
-  if (picker) updateAllColor(picker.value);
+  const { picker } = getColorDom();
+  if (picker) updateAllColor(picker.value, colorState.alpha);
+}
+
+function onColorAlphaChange() {
+  const { alphaRange } = getColorDom();
+  if (!alphaRange) return;
+  updateAllColor(colorState.hex, Number(alphaRange.value) / 100);
+}
+
+function onColorAlphaNumberInput() {
+  const { alphaNumber } = getColorDom();
+  if (!alphaNumber) return;
+  updateAllColor(colorState.hex, parseAlphaInput(alphaNumber.value));
+}
+
+function applyParsedColor(parsed, fallbackHexSource) {
+  updateAllColor(fallbackHexSource || rgbToHex(parsed.r, parsed.g, parsed.b, parsed.a), parsed.a);
 }
 
 function onColorHexInput() {
-  const input = document.getElementById('color-hex');
-  if (!input) return;
-  let val = input.value.trim();
+  const { hexInput } = getColorDom();
+  if (!hexInput) return;
+  let val = hexInput.value.trim();
   if (!val.startsWith('#')) val = '#' + val;
-  if (/^#[0-9a-f]{6}$/i.test(val)) updateAllColor(val);
+  const parsed = hexToRgb(val);
+  if (parsed) {
+    applyParsedColor(parsed, '#' + val.replace(/^#/, '').slice(0, 6));
+  } else {
+    showColorInputError(t('color.invalidHex'));
+  }
 }
 
 function onColorRgbInput() {
-  const input = document.getElementById('color-rgb');
-  if (!input) return;
-  const match = input.value.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
-  if (match) {
-    const hex = rgbToHex(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
-    updateAllColor(hex);
+  const { rgbInput } = getColorDom();
+  if (!rgbInput) return;
+  const parsed = parseRgbLikeInput(rgbInput.value);
+  if (parsed) {
+    applyParsedColor(parsed);
+  } else {
+    showColorInputError(t('color.invalidRgb'));
   }
 }
 
 function onColorHslInput() {
-  const input = document.getElementById('color-hsl');
-  if (!input) return;
-  const match = input.value.match(/hsl\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
-  if (match) {
-    const rgb = hslToRgb(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
-    const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
-    updateAllColor(hex);
+  const { hslInput } = getColorDom();
+  if (!hslInput) return;
+  const parsed = parseHslLikeInput(hslInput.value);
+  if (parsed) {
+    applyParsedColor(parsed);
+  } else {
+    showColorInputError(t('color.invalidHsl'));
   }
 }
 
 function applyColorSwatch(hex) {
-  updateAllColor(hex);
+  updateAllColor(hex, colorState.alpha);
 }
 
 function copyColorValue(inputId) {
-  const input = document.getElementById(inputId);
+  const dom = getColorDom();
+  const inputMap = { 'color-hex': dom.hexInput, 'color-rgb': dom.rgbInput, 'color-hsl': dom.hslInput };
+  const displayMap = { 'color-hex': dom.hexDisplay, 'color-rgb': dom.rgbDisplay, 'color-hsl': dom.hslDisplay };
+  const input = inputMap[inputId];
   if (!input) return;
-  const value = input.value;
+  const value = (input.value || '').trim();
   if (!value) return;
-  if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+  const target = displayMap[inputId] || input;
 
-  navigator.clipboard.writeText(value).then(() => {
-    const originalBg = input.style.background;
-    input.style.background = 'rgba(0, 212, 170, 0.15)';
-    input.style.color = 'var(--accent)';
-    setTimeout(() => {
-      input.style.background = originalBg || '';
-      input.style.color = '';
-    }, 400);
-  }).catch(() => {});
+  writeTextToClipboard(value).then(() => {
+    flashCopiedState(target, value);
+  });
 }
 
+function copyAllColorValues() {
+  const { hexInput, rgbInput, hslInput, copyAllButton } = getColorDom();
+  if (!hexInput || !rgbInput || !hslInput || !copyAllButton) return;
+
+  const payload = [
+    `HEX: ${hexInput.value}`,
+    `RGBA: ${rgbInput.value}`,
+    `HSLA: ${hslInput.value}`
+  ].join('\n');
+
+  writeTextToClipboard(payload).then(() => {
+    const originalText = copyAllButton.dataset.originalText || copyAllButton.textContent || t('color.copyAll');
+    copyAllButton.dataset.originalText = originalText;
+    flashCopiedState(copyAllButton, originalText);
+  });
+}
+
+function pickScreenColor() {
+  if (typeof EyeDropper === 'undefined') {
+    const btn = document.getElementById('color-eyedropper');
+    if (btn) {
+      btn.textContent = '⚠️';
+      btn.style.color = 'var(--red)';
+      setTimeout(() => { btn.textContent = '👁️'; btn.style.color = ''; }, 2000);
+    }
+    return;
+  }
+  const dropper = new EyeDropper();
+  dropper.open()
+    .then(result => {
+      if (result && result.sRGBHex) {
+        updateAllColor(result.sRGBHex, colorState.alpha);
+        copyColorValue('color-hex');
+      }
+    })
+    .catch(() => {});
+}
+
+loadColorHistory();
+updateAllColor(colorState.hex, colorState.alpha);
+renderColorHistory();
+renderColorSchemes();
 applyI18n();
 onImageQualityChange();
 renderImageQueue();
