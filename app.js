@@ -36,11 +36,479 @@ const CDN = {
 
 
 const LOCALE_STORAGE_KEY = 'geek-toolbox-language';
+const RECENT_TOOLS_STORAGE_KEY = 'geek-toolbox-recent-tools';
+const FAVORITE_TOOLS_STORAGE_KEY = 'geek-toolbox-favorite-tools';
+const MAX_RECENT_TOOLS = 8;
+const MAX_FAVORITE_TOOLS = 12;
+const DISCOVERY_COLLAPSE_STORAGE_KEY = 'geek-toolbox-discovery-collapse';
 const SUPPORTED_LANGUAGES = ['zh-CN', 'en'];
 const LANGUAGE_FALLBACKS = {
   'zh-CN': 'en',
   en: 'zh-CN'
 };
+
+const TOOL_CATEGORIES = [
+  { id: 'developer', titleKey: 'categories.developer' },
+  { id: 'text', titleKey: 'categories.text' },
+  { id: 'image', titleKey: 'categories.image' },
+  { id: 'file', titleKey: 'categories.file' }
+];
+
+const TOOL_REGISTRY = [
+  { id: 'timestamp', category: 'developer', titleKey: 'tabs.timestamp', descriptionKey: 'toolCards.timestamp' },
+  { id: 'image', category: 'image', titleKey: 'tabs.image', descriptionKey: 'toolCards.image' },
+  { id: 'convert', category: 'file', titleKey: 'tabs.convert', descriptionKey: 'toolCards.convert' },
+  { id: 'json', category: 'developer', titleKey: 'tabs.json', descriptionKey: 'toolCards.json' },
+  { id: 'diff', category: 'text', titleKey: 'tabs.diff', descriptionKey: 'toolCards.diff' },
+  { id: 'base64', category: 'developer', titleKey: 'tabs.base64', descriptionKey: 'toolCards.base64' },
+  { id: 'count', category: 'text', titleKey: 'tabs.count', descriptionKey: 'toolCards.count' },
+  { id: 'url', category: 'developer', titleKey: 'tabs.url', descriptionKey: 'toolCards.url' },
+  { id: 'regex', category: 'developer', titleKey: 'tabs.regex', descriptionKey: 'toolCards.regex' },
+  { id: 'jwt', category: 'developer', titleKey: 'tabs.jwt', descriptionKey: 'toolCards.jwt' },
+  { id: 'yaml', category: 'developer', titleKey: 'tabs.yaml', descriptionKey: 'toolCards.yaml' },
+  { id: 'color', category: 'image', titleKey: 'tabs.color', descriptionKey: 'toolCards.color' },
+  { id: 'annotate', category: 'image', titleKey: 'tabs.annotate', descriptionKey: 'toolCards.annotate', featured: true, activationHooks: ['syncAnnotationLayout'] },
+  { id: 'card', category: 'text', titleKey: 'tabs.card', descriptionKey: 'toolCards.card', featured: true, activationHooks: ['renderTextCardPreview'] }
+];
+
+const TOOL_REGISTRY_MAP = TOOL_REGISTRY.reduce((registry, tool) => {
+  if (registry[tool.id] && typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn(`[Geek Toolbox] Duplicate tool id in TOOL_REGISTRY: ${tool.id}`);
+  }
+  registry[tool.id] = tool;
+  return registry;
+}, {});
+
+function getToolMeta(toolId) {
+  return TOOL_REGISTRY_MAP[toolId] || null;
+}
+
+function getToolPanelId(toolId) {
+  return 'tool-' + toolId;
+}
+
+function setToolTabAvailability(tab, isAvailable) {
+  if (!tab) return;
+  tab.disabled = !isAvailable;
+  tab.setAttribute('aria-disabled', String(!isAvailable));
+  tab.dataset.toolAvailable = String(isAvailable);
+
+  const unavailableTitleKey = tab.dataset.unavailableTitleKey;
+  if (!isAvailable && unavailableTitleKey) {
+    tab.title = t(unavailableTitleKey);
+  } else {
+    tab.removeAttribute('title');
+  }
+}
+
+function syncToolRegistryState() {
+  if (typeof document === 'undefined') return { missingTabs: [], unknownTabs: [], unavailableTabs: [] };
+
+  const missingTabs = [];
+  const unknownTabs = [];
+  const unavailableTabs = [];
+  const seenTabIds = new Set();
+
+  TOOL_REGISTRY.forEach(tool => {
+    if (!document.querySelector(`.tab[data-tool="${tool.id}"]`)) {
+      missingTabs.push(tool.id);
+    }
+  });
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    const toolId = tab.dataset.tool;
+    seenTabIds.add(toolId);
+    const toolMeta = getToolMeta(toolId);
+    const hasPanel = Boolean(toolMeta && document.getElementById(getToolPanelId(toolId)));
+    const isAvailable = Boolean(toolMeta && hasPanel);
+
+    if (!toolMeta) {
+      unknownTabs.push(toolId);
+    }
+    if (!isAvailable) {
+      unavailableTabs.push(toolId);
+    }
+
+    setToolTabAvailability(tab, isAvailable);
+  });
+
+  if (missingTabs.length && typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn('[Geek Toolbox] TOOL_REGISTRY entries missing tabs:', missingTabs.join(', '));
+  }
+  if (unknownTabs.length && typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn('[Geek Toolbox] Tabs missing TOOL_REGISTRY metadata:', unknownTabs.join(', '));
+  }
+
+  return { missingTabs, unknownTabs, unavailableTabs, seenTabIds: Array.from(seenTabIds) };
+}
+
+function runToolActivationHooks(toolMeta) {
+  const hooks = Array.isArray(toolMeta && toolMeta.activationHooks) ? toolMeta.activationHooks : [];
+  hooks.forEach(hookName => {
+    const hook = typeof globalThis !== 'undefined' ? globalThis[hookName] : undefined;
+    if (typeof hook === 'function') {
+      hook();
+    }
+  });
+}
+
+function normalizeStoredToolIds(value, maxItems) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((toolId, index, source) => typeof toolId === 'string'
+      && Boolean(getToolMeta(toolId))
+      && source.indexOf(toolId) === index)
+    .slice(0, maxItems);
+}
+
+function safeLoadJson(key, fallback) {
+  try {
+    if (typeof localStorage === 'undefined') return fallback;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function safeSaveJson(key, value) {
+  try {
+    if (typeof localStorage === 'undefined') return false;
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+const toolUsageState = {
+  recent: normalizeStoredToolIds(safeLoadJson(RECENT_TOOLS_STORAGE_KEY, []), MAX_RECENT_TOOLS),
+  favorites: normalizeStoredToolIds(safeLoadJson(FAVORITE_TOOLS_STORAGE_KEY, []), MAX_FAVORITE_TOOLS)
+};
+
+const discoveryPanelState = Object.assign({
+  'recommended-tools-panel': false,
+  'favorite-tools-panel': false,
+  'recent-tools-panel': false
+}, safeLoadJson(DISCOVERY_COLLAPSE_STORAGE_KEY, {}));
+
+const discoveryListState = {
+  favoriteExpanded: false,
+  recentExpanded: false
+};
+
+const annotationState = {
+  image: null,
+  fileName: '',
+  canvas: null,
+  ctx: null,
+  tool: 'arrow',
+  color: '#ff4757',
+  lineWidth: 3,
+  fontSize: 18,
+  shapes: [],
+  undoneShapes: [],
+  draftShape: null,
+  dragStart: null,
+  textEntryPoint: null,
+  pointerId: null,
+  initialized: false,
+  messageTimer: null
+};
+
+const TEXT_CARD_EXPORT_DIMENSIONS = {
+  square: { width: 1200, height: 1200 },
+  portrait: { width: 1080, height: 1350 },
+  landscape: { width: 1600, height: 900 }
+};
+
+const textCardState = {
+  text: '',
+  theme: 'dark',
+  size: 'square',
+  initialized: false,
+  messageTimer: null,
+  messageKey: '',
+  messageType: '',
+  messageParams: {},
+  copySupported: false,
+  lastLayout: null
+};
+
+let localizedUiReady = false;
+
+const ANNOTATION_SUPPORTED_TYPES = /^image\/(png|jpeg|webp)$/i;
+const ANNOTATION_DRAG_TOOLS = new Set(['arrow', 'rect', 'mosaic']);
+const MAX_ANNOTATION_CANVAS_DIMENSION = 4096;
+const MAX_ANNOTATION_CANVAS_PIXELS = 16000000;
+const MAX_ANNOTATION_SOURCE_PIXELS = 64000000;
+
+function isFavoriteTool(toolId) {
+  return toolUsageState.favorites.includes(toolId);
+}
+
+function persistRecentTools() {
+  toolUsageState.recent = normalizeStoredToolIds(toolUsageState.recent, MAX_RECENT_TOOLS);
+  safeSaveJson(RECENT_TOOLS_STORAGE_KEY, toolUsageState.recent);
+}
+
+function persistFavoriteTools() {
+  toolUsageState.favorites = normalizeStoredToolIds(toolUsageState.favorites, MAX_FAVORITE_TOOLS);
+  safeSaveJson(FAVORITE_TOOLS_STORAGE_KEY, toolUsageState.favorites);
+}
+
+function getToolsByCategory(categoryId) {
+  return TOOL_REGISTRY.filter(tool => tool.category === categoryId);
+}
+
+function renderToolNavigation() {
+  const root = document.getElementById('tabs');
+  if (!root) return;
+
+  const activeToolId = document.querySelector('.tab.active')?.dataset.tool || TOOL_REGISTRY[0]?.id || 'timestamp';
+  const groupsMarkup = TOOL_CATEGORIES
+    .map(category => {
+      const tools = getToolsByCategory(category.id);
+      if (!tools.length) return '';
+      const buttonMarkup = tools.map(tool => `
+        <button class="tab${tool.id === activeToolId ? ' active' : ''}" type="button" data-tool="${escapeHtml(tool.id)}" data-i18n="${escapeHtml(tool.titleKey)}"${tool.unavailableTitleKey ? ` data-unavailable-title-key="${escapeHtml(tool.unavailableTitleKey)}"` : ''}>${escapeHtml(t(tool.titleKey))}</button>
+      `).join('');
+
+      return `
+        <section class="tool-nav-group" data-category="${escapeHtml(category.id)}">
+          <div class="tool-nav-group-header">
+            <h3 class="tool-nav-group-title">${escapeHtml(t(category.titleKey))}</h3>
+            <span class="tool-nav-group-count">${tools.length}</span>
+          </div>
+          <div class="tool-nav-button-grid">
+            ${buttonMarkup}
+          </div>
+        </section>
+      `;
+    })
+    .join('');
+
+  root.innerHTML = `
+    <div class="tool-nav-header">
+      <div>
+        <p class="section-eyebrow">${escapeHtml(t('home.toolNavEyebrow'))}</p>
+        <h2>${escapeHtml(t('home.toolNavTitle'))}</h2>
+        <p class="section-description">${escapeHtml(t('home.toolNavSubtitle'))}</p>
+      </div>
+    </div>
+    <div class="tool-nav-groups">${groupsMarkup}</div>
+  `;
+}
+
+function persistDiscoveryPanelState() {
+  safeSaveJson(DISCOVERY_COLLAPSE_STORAGE_KEY, discoveryPanelState);
+}
+
+function syncDiscoveryPanelCounts() {
+  if (typeof document === 'undefined') return;
+  const counts = {
+    recommended: TOOL_REGISTRY.filter(tool => tool.featured).length,
+    favorite: toolUsageState.favorites.map(getToolMeta).filter(Boolean).length,
+    recent: toolUsageState.recent.map(getToolMeta).filter(Boolean).length
+  };
+
+  const recommendedNode = document.getElementById('recommended-tools-count');
+  const favoriteNode = document.getElementById('favorite-tools-count');
+  const recentNode = document.getElementById('recent-tools-count');
+
+  if (recommendedNode) recommendedNode.textContent = String(counts.recommended);
+  if (favoriteNode) favoriteNode.textContent = String(counts.favorite);
+  if (recentNode) recentNode.textContent = String(counts.recent);
+}
+
+function syncDiscoveryPanels() {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll('.discovery-accordion-trigger').forEach(trigger => {
+    const targetId = trigger.dataset.accordionTarget;
+    const panel = targetId ? document.getElementById(targetId) : null;
+    const section = trigger.closest('.discovery-accordion-section');
+    const isOpen = Boolean(discoveryPanelState[targetId]);
+    trigger.setAttribute('aria-expanded', String(isOpen));
+    if (section) {
+      section.classList.toggle('is-expanded', isOpen);
+      section.classList.toggle('is-collapsed', !isOpen);
+    }
+    if (panel) {
+      panel.hidden = !isOpen;
+      panel.classList.toggle('is-collapsed', !isOpen);
+    }
+  });
+}
+
+function toggleDiscoveryPanel(panelId) {
+  if (!panelId) return;
+  const nextOpenState = !discoveryPanelState[panelId];
+  Object.keys(discoveryPanelState).forEach(key => {
+    discoveryPanelState[key] = false;
+  });
+  discoveryPanelState[panelId] = nextOpenState;
+  persistDiscoveryPanelState();
+  syncDiscoveryPanels();
+}
+
+function renderToolCard(tool, options = {}) {
+  if (!tool) return '';
+  const { featured = false, compact = false, dense = false } = options;
+  const toolPanelAvailable = typeof document !== 'undefined'
+    && Boolean(document.getElementById(getToolPanelId(tool.id)))
+    && Boolean(document.querySelector(`.tab[data-tool="${tool.id}"]`));
+  const primaryLabel = toolPanelAvailable ? t('home.useNow') : t('common.comingSoon');
+  const favoriteLabel = isFavoriteTool(tool.id) ? t('home.unfavorite') : t('home.favorite');
+  const favoriteActiveClass = isFavoriteTool(tool.id) ? ' active' : '';
+  const badge = tool.featured ? `<span class="discovery-badge tool-badge">${escapeHtml(t('home.newBadge'))}</span>` : '';
+
+  if (compact) {
+    return `
+      <article class="discovery-quick-item${isFavoriteTool(tool.id) ? ' is-favorite' : ''}${dense ? ' is-dense' : ''}" data-tool-card="${tool.id}">
+        <button class="discovery-quick-launch" type="button" onclick="openToolFromDiscovery('${tool.id}')" ${toolPanelAvailable ? '' : 'disabled aria-disabled="true"'}>
+          <span class="discovery-quick-copy">
+            <strong>${escapeHtml(t(tool.titleKey))}</strong>
+            ${dense ? '' : `<span>${escapeHtml(t(tool.descriptionKey))}</span>`}
+          </span>
+        </button>
+        <button class="btn outline small favorite-toggle${favoriteActiveClass}" type="button" aria-pressed="${isFavoriteTool(tool.id) ? 'true' : 'false'}" onclick="toggleFavoriteTool('${tool.id}')">${escapeHtml(favoriteLabel)}</button>
+      </article>
+    `;
+  }
+
+  const statusBlock = featured
+    ? `<div class="discovery-card__status"><span class="discovery-status-chip">${escapeHtml(primaryLabel)}</span></div>`
+    : '';
+
+  return `
+    <article class="discovery-card${featured ? ' discovery-card--featured' : ''}" data-tool-card="${tool.id}">
+      <div class="discovery-card__top">
+        <div>
+          ${featured ? `<span class="discovery-card__eyebrow">${escapeHtml(t('home.featuredEyebrow'))}</span>` : ''}
+          <h3>${escapeHtml(t(tool.titleKey))}</h3>
+          <p>${escapeHtml(t(tool.descriptionKey))}</p>
+        </div>
+        ${badge}
+      </div>
+      ${statusBlock}
+      <div class="btn-row discovery-card__actions">
+        <button class="btn primary small" type="button" onclick="openToolFromDiscovery('${tool.id}')" ${toolPanelAvailable ? '' : 'disabled aria-disabled="true"'}>${escapeHtml(primaryLabel)}</button>
+        <button class="btn outline small favorite-toggle${favoriteActiveClass}" type="button" aria-pressed="${isFavoriteTool(tool.id) ? 'true' : 'false'}" onclick="toggleFavoriteTool('${tool.id}')">${escapeHtml(favoriteLabel)}</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderRecommendedTools() {
+  const root = document.getElementById('recommended-tools');
+  if (!root) return;
+
+  root.innerHTML = TOOL_REGISTRY
+    .filter(tool => tool.featured)
+    .map(tool => renderToolCard(tool, { featured: true, compact: true, dense: true }))
+    .join('');
+  syncDiscoveryPanelCounts();
+}
+
+function syncRecentToolsActionState() {
+  const clearButton = document.getElementById('clear-recent-tools');
+  if (!clearButton) return;
+  const hasRecent = toolUsageState.recent.some(toolId => Boolean(getToolMeta(toolId)));
+  clearButton.disabled = !hasRecent;
+  clearButton.setAttribute('aria-disabled', String(!hasRecent));
+}
+
+function renderDiscoveryListWithLimit(tools, options = {}) {
+  const { emptyKey = '', expanded = false, expandAction = '' } = options;
+  if (!tools.length) {
+    return `<div class="discovery-empty tool-empty">${escapeHtml(t(emptyKey))}</div>`;
+  }
+
+  const visibleTools = expanded ? tools : tools.slice(0, 3);
+  const hiddenCount = Math.max(0, tools.length - 3);
+  const listMarkup = visibleTools.map(tool => renderToolCard(tool, { compact: true, dense: true })).join('');
+
+  if (!hiddenCount && !expanded) return listMarkup;
+
+  const toggleLabel = expanded
+    ? t('home.showLess')
+    : t('home.showMoreCount', { count: hiddenCount });
+
+  return `${listMarkup}
+    <button class="discovery-more-btn" type="button" onclick="${expandAction}">${escapeHtml(toggleLabel)}</button>
+  `;
+}
+
+function renderRecentTools() {
+  const root = document.getElementById('recent-tools');
+  if (!root) return;
+
+  const tools = toolUsageState.recent
+    .map(getToolMeta)
+    .filter(Boolean);
+
+  syncRecentToolsActionState();
+
+  root.innerHTML = renderDiscoveryListWithLimit(tools, {
+    emptyKey: 'home.recentEmpty',
+    expanded: discoveryListState.recentExpanded,
+    expandAction: 'toggleRecentToolsExpanded()'
+  });
+  syncDiscoveryPanelCounts();
+}
+
+function renderFavoriteTools() {
+  const root = document.getElementById('favorite-tools');
+  if (!root) return;
+
+  const tools = toolUsageState.favorites
+    .map(getToolMeta)
+    .filter(Boolean);
+
+  root.innerHTML = renderDiscoveryListWithLimit(tools, {
+    emptyKey: 'home.favoriteEmpty',
+    expanded: discoveryListState.favoriteExpanded,
+    expandAction: 'toggleFavoriteToolsExpanded()'
+  });
+  syncDiscoveryPanelCounts();
+}
+
+function toggleRecentToolsExpanded() {
+  discoveryListState.recentExpanded = !discoveryListState.recentExpanded;
+  renderRecentTools();
+}
+
+function toggleFavoriteToolsExpanded() {
+  discoveryListState.favoriteExpanded = !discoveryListState.favoriteExpanded;
+  renderFavoriteTools();
+}
+
+function recordRecentTool(toolId) {
+  if (!getToolMeta(toolId)) return;
+  toolUsageState.recent = [toolId]
+    .concat(toolUsageState.recent.filter(id => id !== toolId))
+    .slice(0, MAX_RECENT_TOOLS);
+  persistRecentTools();
+  renderRecentTools();
+}
+
+function toggleFavoriteTool(toolId) {
+  if (!getToolMeta(toolId)) return;
+  toolUsageState.favorites = isFavoriteTool(toolId)
+    ? toolUsageState.favorites.filter(id => id !== toolId)
+    : [toolId].concat(toolUsageState.favorites.filter(id => id !== toolId)).slice(0, MAX_FAVORITE_TOOLS);
+
+  persistFavoriteTools();
+  renderRecommendedTools();
+  renderRecentTools();
+  renderFavoriteTools();
+}
+
+function clearRecentTools() {
+  toolUsageState.recent = [];
+  persistRecentTools();
+  renderRecentTools();
+}
 
 const translations = {
   'zh-CN': {
@@ -55,7 +523,14 @@ const translations = {
       confirm: '确定',
       copied: '✅ 已复制',
       resultEmpty: '结果：--',
-      notSet: '未设置'
+      notSet: '未设置',
+      comingSoon: '即将上线'
+    },
+    categories: {
+      developer: '开发工具',
+      text: '文本工具',
+      image: '图片工具',
+      file: '文件工具'
     },
     header: {
       logo: '⚡ 极客工具箱',
@@ -76,7 +551,125 @@ const translations = {
       regex: '正则测试',
       jwt: 'JWT 解码',
       yaml: 'YAML ↔ JSON',
-      color: '颜色转换'
+      color: '颜色转换',
+      annotate: '截图标注',
+      card: '文字转图卡片'
+    },
+    home: {
+      discoveryShellAriaLabel: '工具发现区',
+      recommendedSectionAriaLabel: '推荐工具区',
+      recentSectionAriaLabel: '最近使用工具区',
+      favoriteSectionAriaLabel: '收藏工具区',
+      discoveryEyebrow: '发现',
+      sidebarTitle: '快捷入口',
+      sidebarSubtitle: '将推荐、收藏和最近使用折叠到侧边栏，让右侧工作区更专注。',
+      toolNavEyebrow: '工具分类',
+      toolNavTitle: '全部功能',
+      toolNavSubtitle: '按类别快速定位工具，减少长列表查找成本。',
+      toolNavAriaLabel: '工具分类导航',
+      featuredEyebrow: '推荐',
+      recommendedTitle: '推荐工具',
+      recommendedSubtitle: '优先使用可分享的新工具，并从主页快速返回常用工作流。',
+      recentTitle: '最近使用',
+      recentSubtitle: '最近打开过的工具会保留在这里，方便快速返回。',
+      clearRecent: '清空',
+      recentEmpty: '从下方标签栏或推荐卡片打开工具后，最近记录会显示在这里。',
+      favoriteTitle: '收藏工具',
+      favoriteSubtitle: '收藏高频工具，在主页一键直达。',
+      favoriteEmpty: '把常用工具加入收藏，之后就能在这里快速打开。',
+      showMoreCount: '展开其余 {count} 项',
+      showLess: '收起',
+      useNow: '立即使用',
+      favorite: '收藏',
+      unfavorite: '取消收藏',
+      newBadge: 'NEW'
+    },
+    annotate: {
+      uploadTitle: '上传截图',
+      uploadHint: 'PNG、JPG、WEBP',
+      uploadInputAria: '上传截图文件',
+      toolbarAria: '标注工具',
+      settingsAria: '标注设置',
+      color: '颜色',
+      lineWidth: '线宽',
+      fontSize: '字体大小',
+      undo: '撤销',
+      redo: '重做',
+      clearAll: '清空全部',
+      export: '导出 PNG',
+      canvasAria: '标注画布工作区',
+      emptyTitle: '空白工作区',
+      emptyHint: '上传截图后即可开始标注。',
+      textPromptLabel: '文本内容',
+      textPromptPlaceholder: '输入标注文本',
+      textPromptHint: '先点击截图确定文本位置，再在这里输入并应用。',
+      applyText: '应用文本',
+      cancelText: '取消文本',
+      tools: {
+        select: '选择',
+        arrow: '箭头',
+        rect: '矩形',
+        text: '文字',
+        number: '序号',
+        mosaic: '马赛克'
+      },
+      messageUploadFirst: '请先上传截图再进行标注。',
+      invalidFormat: '不支持的图片格式，请上传 PNG、JPG 或 WEBP 截图。',
+      loadFailed: '无法加载该截图，请尝试其他图片。',
+      readFailed: '读取截图失败，请重试。',
+      textPending: '已记录文本位置，请在下方输入内容并应用。',
+      textEmptyError: '请输入标注文本后再应用。',
+      textApplied: '文本标注已添加。',
+      textCancelled: '已取消文本输入。',
+      clearMissing: '请先上传截图后再清空标注。',
+      clearSuccess: '已清空所有标注。',
+      exportMissing: '请先上传截图后再导出。',
+      exportFailed: '当前浏览器无法导出 PNG。',
+      exportSuccess: 'PNG 导出成功。',
+      imageScaled: '截图较大，已缩放到 {width} × {height} 后载入。',
+      imageTooLargeReject: '截图尺寸过大（{width} × {height}），已拒绝载入，请先压缩后再试。'
+    },
+    card: {
+      title: '文字转图卡片',
+      subtitle: '把代码、文本或说明整理成可分享图卡。',
+      controlsAria: '文字图卡控件',
+      previewAria: '文字图卡预览',
+      inputLabel: '输入内容',
+      placeholder: '粘贴文本、代码、JSON 或笔记...',
+      themeLabel: '主题',
+      themeDark: '深色',
+      themeLight: '浅色',
+      sizeLabel: '尺寸',
+      sizeSquare: '方形',
+      sizePortrait: '竖版',
+      sizeLandscape: '横版',
+      export: '导出 PNG',
+      copyImage: '复制图片',
+      copyImageUnsupported: '当前不可复制',
+      emptyPreview: '开始输入，即时预览可分享图卡。',
+      emptyInput: '请先输入内容再导出或复制。',
+      exportSuccess: 'PNG 导出成功。',
+      exportFailed: '生成图卡失败，请稍后重试。',
+      copySuccess: '图片已复制到剪贴板。',
+      copyUnavailable: '当前浏览器不支持复制图片，请改用导出 PNG。',
+      copyFailed: '复制图片失败，请改用导出 PNG。',
+      clearSuccess: '已清空图卡内容并恢复默认设置。'
+    },
+    toolCards: {
+      timestamp: '时间戳互转、当前时间速览与日期时间选择。',
+      image: '本地压缩图片，支持批量处理与自定义裁剪。',
+      convert: '在浏览器本地完成常见文件格式转换与导出。',
+      json: '格式化、压缩并校验 JSON 内容。',
+      diff: '逐段对比两份文本内容差异。',
+      base64: '快速进行 Base64 编码与解码。',
+      count: '实时统计字数、行数与文本结构信息。',
+      url: '执行 URL 编码、解码与常见粘贴场景处理。',
+      regex: '测试正则表达式、替换结果与匹配详情。',
+      jwt: '本地解析 JWT 头部、载荷与过期信息。',
+      yaml: '在 YAML 与 JSON 之间互相转换。',
+      color: '转换 HEX、RGB、HSL，并生成配色方案。',
+      annotate: '为截图添加箭头、文字、序号与马赛克标注，并导出整理后的 PNG。',
+      card: '把代码、文本或说明整理成可分享图卡，并支持导出 PNG 与复制图片。'
     },
     json: {
       title: 'JSON 格式化 / 校验',
@@ -128,6 +721,7 @@ const translations = {
       matchCount: '匹配',
       replaceLabel: '替换为：',
       replacePlaceholder: '替换文本...',
+      clearTitle: '清空正则与测试文本',
       noMatch: '(无匹配)',
       error: '❌ 正则错误: {message}',
       modeMatch: '匹配',
@@ -169,7 +763,17 @@ const translations = {
       currentLabel: '当前颜色：',
       alphaLabel: '透明度',
       copyHint: '点击下方任意格式即可复制，反馈与时间戳工具一致',
-      copyTitle: '点击复制'
+      copyTitle: '点击复制',
+      copyAll: '复制全部',
+      historyLabel: '历史记录',
+      clearHistory: '清空历史',
+      invalidHex: '无效的 HEX / HEXA 格式',
+      invalidRgb: '无效的 RGB / RGBA 格式',
+      invalidHsl: '无效的 HSL / HSLA 格式',
+      schemesLabel: '配色方案',
+      schemeComplementary: '互补色',
+      schemeAnalogous: '邻近色',
+      schemeTriadic: '三角色'
     },
     timestamp: {
       title: '时间戳转换',
@@ -353,6 +957,8 @@ const translations = {
       footerNotice: '📌 所有处理在浏览器本地完成 · 数据不会上传到服务器 · 纯前端工具',
       footerPrompt: '如果你觉得有用，',
       footerLink: '请我喝杯咖啡 ☕',
+      entryHint: '需求/优化建议？欢迎告诉我',
+      entryCta: '联系 / 打赏',
       modalTitle: '❤️ 感谢支持！',
       tabsAriaLabel: '打赏方式',
       cnTab: '国内',
@@ -382,6 +988,12 @@ const translations = {
     meta: {
       title: 'Geek Toolbox'
     },
+    categories: {
+      developer: 'Developer Tools',
+      text: 'Text Tools',
+      image: 'Image Tools',
+      file: 'File Tools'
+    },
     common: {
       clear: 'Clear',
       copyResult: 'Copy Result',
@@ -390,7 +1002,8 @@ const translations = {
       confirm: 'Confirm',
       copied: '✅ Copied',
       resultEmpty: 'Result: --',
-      notSet: 'Not set'
+      notSet: 'Not set',
+      comingSoon: 'Coming soon'
     },
     header: {
       logo: '⚡ Geek Toolbox',
@@ -411,7 +1024,125 @@ const translations = {
       regex: 'Regex Tester',
       jwt: 'JWT Decoder',
       yaml: 'YAML ↔ JSON',
-      color: 'Color Converter'
+      color: 'Color Converter',
+      annotate: 'Screenshot Annotation',
+      card: 'Text to Image Card'
+    },
+    home: {
+      discoveryShellAriaLabel: 'Tool discovery area',
+      recommendedSectionAriaLabel: 'Recommended tools section',
+      recentSectionAriaLabel: 'Recent tools section',
+      favoriteSectionAriaLabel: 'Favorite tools section',
+      discoveryEyebrow: 'Discover',
+      sidebarTitle: 'Quick Access',
+      sidebarSubtitle: 'Collapse recommendations, favorites, and recent history to keep the workspace focused.',
+      toolNavEyebrow: 'Tool Categories',
+      toolNavTitle: 'All Tools',
+      toolNavSubtitle: 'Browse by category instead of scanning one long button row.',
+      toolNavAriaLabel: 'Tool category navigation',
+      featuredEyebrow: 'Featured',
+      recommendedTitle: 'Recommended',
+      recommendedSubtitle: 'Start with the share-ready additions and jump back into your common workflows faster.',
+      recentTitle: 'Recent Tools',
+      recentSubtitle: 'Tools you opened most recently stay here so you can jump back in quickly.',
+      clearRecent: 'Clear',
+      recentEmpty: 'Open any tool from the tabs or recommended cards and it will appear here.',
+      favoriteTitle: 'Favorite Tools',
+      favoriteSubtitle: 'Pin the tools you use most so they stay one click away on the home surface.',
+      favoriteEmpty: 'Favorite a tool to keep a quick launcher here on the home surface.',
+      showMoreCount: 'Show {count} more',
+      showLess: 'Show less',
+      useNow: 'Use Now',
+      favorite: 'Favorite',
+      unfavorite: 'Unfavorite',
+      newBadge: 'NEW'
+    },
+    annotate: {
+      uploadTitle: 'Upload screenshot',
+      uploadHint: 'PNG, JPG, WEBP',
+      uploadInputAria: 'Upload screenshot file',
+      toolbarAria: 'Annotation tools',
+      settingsAria: 'Annotation settings',
+      color: 'Color',
+      lineWidth: 'Line Width',
+      fontSize: 'Font Size',
+      undo: 'Undo',
+      redo: 'Redo',
+      clearAll: 'Clear All',
+      export: 'Export PNG',
+      canvasAria: 'Annotation canvas workspace',
+      emptyTitle: 'Empty workspace',
+      emptyHint: 'Upload a screenshot to begin annotating.',
+      textPromptLabel: 'Text',
+      textPromptPlaceholder: 'Enter annotation text',
+      textPromptHint: 'Click the screenshot to place text, then apply it here.',
+      applyText: 'Apply',
+      cancelText: 'Cancel',
+      tools: {
+        select: 'Select',
+        arrow: 'Arrow',
+        rect: 'Rectangle',
+        text: 'Text',
+        number: 'Number',
+        mosaic: 'Mosaic'
+      },
+      messageUploadFirst: 'Upload a screenshot before annotating.',
+      invalidFormat: 'Unsupported image format. Please upload a PNG, JPG, or WEBP screenshot.',
+      loadFailed: 'Unable to load that screenshot. Please try another image.',
+      readFailed: 'Unable to read that screenshot. Please try again.',
+      textPending: 'Text position saved. Enter the content below and apply it.',
+      textEmptyError: 'Enter annotation text before applying it.',
+      textApplied: 'Text annotation added.',
+      textCancelled: 'Text entry cancelled.',
+      clearMissing: 'Upload a screenshot before clearing annotations.',
+      clearSuccess: 'All annotations cleared.',
+      exportMissing: 'Upload a screenshot before exporting.',
+      exportFailed: 'PNG export failed in this browser.',
+      exportSuccess: 'PNG exported successfully.',
+      imageScaled: 'Large screenshot loaded after scaling to {width} × {height}.',
+      imageTooLargeReject: 'Screenshot too large ({width} × {height}). Compress it before annotating.'
+    },
+    card: {
+      title: 'Text to Image Card',
+      subtitle: 'Turn code, text, or notes into a shareable image card.',
+      controlsAria: 'Text card controls',
+      previewAria: 'Text card preview',
+      inputLabel: 'Input',
+      placeholder: 'Paste text, code, JSON, or notes here...',
+      themeLabel: 'Theme',
+      themeDark: 'Dark',
+      themeLight: 'Light',
+      sizeLabel: 'Size',
+      sizeSquare: 'Square',
+      sizePortrait: 'Portrait',
+      sizeLandscape: 'Landscape',
+      export: 'Export PNG',
+      copyImage: 'Copy Image',
+      copyImageUnsupported: 'Copy Unavailable',
+      emptyPreview: 'Start typing to preview your shareable image card.',
+      emptyInput: 'Enter content before exporting or copying.',
+      exportSuccess: 'PNG exported successfully.',
+      exportFailed: 'Unable to generate the card image. Please try again.',
+      copySuccess: 'Image copied to clipboard.',
+      copyUnavailable: 'Image copy is not supported in this browser. Export PNG instead.',
+      copyFailed: 'Unable to copy the image. Export PNG instead.',
+      clearSuccess: 'Card content cleared and defaults restored.'
+    },
+    toolCards: {
+      timestamp: 'Convert timestamps, preview the current time, and pick date/time values quickly.',
+      image: 'Compress images locally with batch processing and custom crop support.',
+      convert: 'Run common file conversions and exports entirely in the browser.',
+      json: 'Format, minify, and validate JSON content.',
+      diff: 'Compare two blocks of text and review the differences side by side.',
+      base64: 'Quickly encode and decode Base64 content.',
+      count: 'Live text counts for characters, lines, and other writing stats.',
+      url: 'Encode or decode URLs and pasted strings for common developer workflows.',
+      regex: 'Test patterns, replacements, and match details in one place.',
+      jwt: 'Decode JWT headers, payloads, and expiry details locally.',
+      yaml: 'Convert between YAML and JSON formats.',
+      color: 'Translate HEX, RGB, and HSL values and generate related color schemes.',
+      annotate: 'Add arrows, notes, numbered callouts, and mosaic masking to screenshots, then export the result as PNG.',
+      card: 'Turn code, text, or notes into a shareable image card with PNG export and image copy.'
     },
     json: {
       title: 'Format / Validate JSON',
@@ -463,6 +1194,7 @@ const translations = {
       matchCount: 'matches',
       replaceLabel: 'Replace: ',
       replacePlaceholder: 'Replacement text...',
+      clearTitle: 'Clear regex and test text',
       noMatch: '(no match)',
       error: '❌ Regex error: {message}',
       modeMatch: 'Match',
@@ -698,6 +1430,8 @@ const translations = {
       footerNotice: '📌 Everything runs locally in your browser · Your data is not uploaded · Pure frontend utilities',
       footerPrompt: 'If you find this useful, ',
       footerLink: 'buy me a coffee ☕',
+      entryHint: 'Feature request or improvement idea?',
+      entryCta: 'Support / Contact',
       modalTitle: '❤️ Thanks for your support!',
       tabsAriaLabel: 'Donation methods',
       cnTab: 'Domestic',
@@ -765,8 +1499,32 @@ function formatDateTimeByLanguage(date) {
   return date.toLocaleString(currentLanguage === 'zh-CN' ? 'zh-CN' : 'en-US');
 }
 
-function applyI18n() {
+function refreshLocalizedDynamicUI() {
+  if (typeof renderToolNavigation === 'function') renderToolNavigation();
+  syncToolRegistryState();
+  if (typeof syncDiscoveryPanels === 'function') syncDiscoveryPanels();
+  if (typeof renderRecommendedTools === 'function') renderRecommendedTools();
+  if (typeof renderRecentTools === 'function') renderRecentTools();
+  if (typeof renderFavoriteTools === 'function') renderFavoriteTools();
+  if (typeof syncAnnotationLayout === 'function') syncAnnotationLayout();
+  if (typeof syncAnnotationTextEntry === 'function') syncAnnotationTextEntry();
+  if (typeof updateTimestampInputPlaceholder === 'function') updateTimestampInputPlaceholder();
+  if (typeof updateTimestampPickerPreview === 'function') updateTimestampPickerPreview();
+  if (typeof renderTimestampPickerCalendar === 'function') renderTimestampPickerCalendar();
+  if (typeof refreshNow === 'function') refreshNow();
+  if (typeof renderTextCardPreview === 'function') renderTextCardPreview();
+  if (typeof renderImageQueue === 'function') renderImageQueue();
+  if (typeof syncImageMeta === 'function') syncImageMeta();
+  if (typeof updateImageCompressionSummary === 'function') updateImageCompressionSummary();
+  if (typeof updateImageActionButtons === 'function') updateImageActionButtons();
+  if (typeof restoreConvertHint === 'function') restoreConvertHint(true);
+  if (typeof updateConvertButtons === 'function') updateConvertButtons();
+  if (typeof applySupportLinks === 'function') applySupportLinks();
+}
+
+function applyI18n(options = {}) {
   if (typeof document === 'undefined') return;
+  const { refreshDynamic = localizedUiReady } = options;
   document.documentElement.lang = currentLanguage === 'zh-CN' ? 'zh-CN' : 'en';
   document.title = t('meta.title');
 
@@ -793,21 +1551,13 @@ function applyI18n() {
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.classList.toggle('active', btn.id === `lang-${currentLanguage}`);
   });
+
+  if (refreshDynamic) refreshLocalizedDynamicUI();
 }
 
 function refreshLocalizedUI() {
-  applyI18n();
-  if (typeof updateTimestampInputPlaceholder === 'function') updateTimestampInputPlaceholder();
-  if (typeof updateTimestampPickerPreview === 'function') updateTimestampPickerPreview();
-  if (typeof renderTimestampPickerCalendar === 'function') renderTimestampPickerCalendar();
-  if (typeof refreshNow === 'function') refreshNow();
-  if (typeof renderImageQueue === 'function') renderImageQueue();
-  if (typeof syncImageMeta === 'function') syncImageMeta();
-  if (typeof updateImageCompressionSummary === 'function') updateImageCompressionSummary();
-  if (typeof updateImageActionButtons === 'function') updateImageActionButtons();
-  if (typeof restoreConvertHint === 'function') restoreConvertHint(true);
-  if (typeof updateConvertButtons === 'function') updateConvertButtons();
-  if (typeof applySupportLinks === 'function') applySupportLinks();
+  applyI18n({ refreshDynamic: false });
+  refreshLocalizedDynamicUI();
 }
 
 function setLanguage(lang) {
@@ -820,15 +1570,1184 @@ function setLanguage(lang) {
   refreshLocalizedUI();
 }
 
+function syncTabSemantics(activeToolId) {
+  if (typeof document === 'undefined') return;
 
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('tool-' + tab.dataset.tool).classList.add('active');
+  document.querySelectorAll('.tab').forEach(tabNode => {
+    const toolId = tabNode.dataset.tool;
+    const panelId = getToolPanelId(toolId);
+    const isActive = toolId === activeToolId;
+    tabNode.setAttribute('role', 'tab');
+    tabNode.setAttribute('id', `tab-${toolId}`);
+    tabNode.setAttribute('aria-controls', panelId);
+    tabNode.setAttribute('aria-selected', String(isActive));
+    tabNode.setAttribute('tabindex', isActive ? '0' : '-1');
   });
+
+  document.querySelectorAll('.tool-panel').forEach(panel => {
+    const toolId = panel.id.replace(/^tool-/, '');
+    const isActive = toolId === activeToolId;
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', `tab-${toolId}`);
+    panel.setAttribute('tabindex', '0');
+    panel.hidden = !isActive;
+  });
+
+  const tabsRoot = document.getElementById('tabs');
+  if (tabsRoot) tabsRoot.setAttribute('role', 'tablist');
+}
+
+function openToolFromDiscovery(toolId) {
+  const switched = switchTool(toolId);
+  if (!switched || typeof document === 'undefined') return switched;
+
+  const tab = document.querySelector(`.tab[data-tool="${toolId}"]`);
+  if (tab && typeof tab.focus === 'function') {
+    tab.focus();
+  }
+  return switched;
+}
+
+function scrollActiveToolIntoView(targetPanel) {
+  if (typeof window === 'undefined' || !targetPanel) return;
+  const primaryTarget = targetPanel.querySelector('textarea, input, select, button, .code-output, .diff-output, canvas') || targetPanel;
+  const panelTop = targetPanel.getBoundingClientRect().top + window.scrollY;
+  const targetTop = primaryTarget.getBoundingClientRect().top + window.scrollY;
+  const top = Math.max(0, Math.min(panelTop, targetTop) - 14);
+  window.scrollTo({ top, behavior: 'smooth' });
+}
+
+function flashActiveToolPanel(targetPanel) {
+  if (!targetPanel) return;
+  targetPanel.classList.remove('tool-panel-flash');
+  void targetPanel.offsetWidth;
+  targetPanel.classList.add('tool-panel-flash');
+  clearTimeout(targetPanel._flashTimer);
+  targetPanel._flashTimer = setTimeout(() => {
+    targetPanel.classList.remove('tool-panel-flash');
+  }, 1200);
+}
+
+
+function switchTool(toolId, options = {}) {
+  const { track = true, scrollIntoView = true } = options;
+  const toolMeta = getToolMeta(toolId);
+  if (!toolMeta || typeof document === 'undefined') return false;
+
+  const tab = document.querySelector(`.tab[data-tool="${toolMeta.id}"]`);
+  const targetPanelId = getToolPanelId(toolMeta.id);
+  const targetPanel = document.getElementById(targetPanelId);
+  if (!tab || tab.disabled || !targetPanel) return false;
+
+  document.querySelectorAll('.tab').forEach(tabNode => {
+    tabNode.classList.toggle('active', tabNode.dataset.tool === toolMeta.id);
+  });
+
+  document.querySelectorAll('.tool-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === targetPanelId);
+  });
+  syncTabSemantics(toolMeta.id);
+
+  if (track && typeof recordRecentTool === 'function') {
+    recordRecentTool(toolMeta.id);
+  }
+  runToolActivationHooks(toolMeta);
+  flashActiveToolPanel(targetPanel);
+  if (scrollIntoView) {
+    scrollActiveToolIntoView(targetPanel);
+  }
+
+  return true;
+}
+
+document.getElementById('tabs')?.addEventListener('click', event => {
+  const tab = event.target.closest('.tab');
+  if (!tab) return;
+  switchTool(tab.dataset.tool);
 });
+
+document.getElementById('discovery-shell')?.addEventListener('click', event => {
+  const moreButton = event.target.closest('.discovery-more-btn');
+  if (moreButton) return;
+  const trigger = event.target.closest('.discovery-accordion-trigger');
+  if (!trigger) return;
+  event.preventDefault();
+  toggleDiscoveryPanel(trigger.dataset.accordionTarget);
+});
+
+function getAnnotationTextControlIds() {
+  return {
+    root: document.getElementById('annotate-text-entry'),
+    input: document.getElementById('annotate-text-input'),
+    apply: document.getElementById('annotate-text-apply'),
+    cancel: document.getElementById('annotate-text-cancel')
+  };
+}
+
+function setAnnotationMessage(message = '', type = '') {
+  const node = document.getElementById('annotate-message');
+  if (!node) return;
+  node.textContent = message;
+  node.dataset.type = type;
+}
+
+function clearAnnotationMessageLater(delay = 2200) {
+  if (annotationState.messageTimer) {
+    clearTimeout(annotationState.messageTimer);
+    annotationState.messageTimer = null;
+  }
+  if (!delay) return;
+  annotationState.messageTimer = setTimeout(() => {
+    setAnnotationMessage('');
+    annotationState.messageTimer = null;
+  }, delay);
+}
+
+function clearPendingAnnotationText() {
+  const controls = getAnnotationTextControlIds();
+  annotationState.textEntryPoint = null;
+  if (controls.root) controls.root.classList.add('hidden');
+  if (controls.input) controls.input.value = '';
+  if (annotationState.tool === 'text') {
+    syncAnnotationTextEntry();
+  }
+}
+
+function syncAnnotationTextEntry() {
+  const controls = getAnnotationTextControlIds();
+  const isVisible = annotationState.tool === 'text' && Boolean(annotationState.textEntryPoint);
+  if (controls.root) controls.root.classList.toggle('hidden', !isVisible);
+  if (isVisible && controls.input && document.activeElement !== controls.input) {
+    controls.input.focus();
+    controls.input.select();
+  }
+}
+
+function syncAnnotationEmptyState() {
+  const emptyState = document.getElementById('annotate-empty');
+  if (!emptyState) return;
+  emptyState.classList.toggle('hidden', Boolean(annotationState.image));
+}
+
+function syncAnnotationActionButtons() {
+  const undoButton = document.getElementById('annotate-undo');
+  const redoButton = document.getElementById('annotate-redo');
+  const clearButton = document.getElementById('annotate-clear');
+  const exportButton = document.getElementById('annotate-export');
+  const hasImage = Boolean(annotationState.image);
+  const hasShapes = annotationState.shapes.length > 0;
+
+  if (undoButton) undoButton.disabled = !hasShapes;
+  if (redoButton) redoButton.disabled = annotationState.undoneShapes.length === 0;
+  if (clearButton) clearButton.disabled = !hasImage && !hasShapes;
+  if (exportButton) exportButton.disabled = !hasImage;
+}
+
+function normalizeAnnotationRect(startPoint, endPoint) {
+  const x = Math.min(startPoint.x, endPoint.x);
+  const y = Math.min(startPoint.y, endPoint.y);
+  const width = Math.abs(endPoint.x - startPoint.x);
+  const height = Math.abs(endPoint.y - startPoint.y);
+  return { x, y, width, height };
+}
+
+function getAnnotationCanvasPoint(event) {
+  const canvas = annotationState.canvas;
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: Math.min(canvas.width, Math.max(0, (event.clientX - rect.left) * scaleX)),
+    y: Math.min(canvas.height, Math.max(0, (event.clientY - rect.top) * scaleY))
+  };
+}
+
+function buildAnnotationShape(tool, startPoint, endPoint) {
+  if (tool === 'arrow') {
+    return {
+      type: 'arrow',
+      startX: startPoint.x,
+      startY: startPoint.y,
+      endX: endPoint.x,
+      endY: endPoint.y,
+      color: annotationState.color,
+      lineWidth: annotationState.lineWidth
+    };
+  }
+
+  if (tool === 'rect') {
+    return {
+      type: 'rect',
+      ...normalizeAnnotationRect(startPoint, endPoint),
+      color: annotationState.color,
+      lineWidth: annotationState.lineWidth
+    };
+  }
+
+  if (tool === 'mosaic') {
+    return {
+      type: 'mosaic',
+      ...normalizeAnnotationRect(startPoint, endPoint),
+      pixelSize: Math.max(6, annotationState.lineWidth * 4)
+    };
+  }
+
+  return null;
+}
+
+function isMeaningfulAnnotationShape(shape) {
+  if (!shape) return false;
+  if (shape.type === 'arrow') {
+    return Math.hypot(shape.endX - shape.startX, shape.endY - shape.startY) >= 6;
+  }
+  if (shape.type === 'rect' || shape.type === 'mosaic') {
+    return shape.width >= 6 && shape.height >= 6;
+  }
+  return true;
+}
+
+function getAnnotationLoadTargetSize(width, height) {
+  const totalPixels = width * height;
+  if (totalPixels > MAX_ANNOTATION_SOURCE_PIXELS) {
+    return { rejected: true };
+  }
+
+  const widthScale = Math.min(1, MAX_ANNOTATION_CANVAS_DIMENSION / width);
+  const heightScale = Math.min(1, MAX_ANNOTATION_CANVAS_DIMENSION / height);
+  const pixelScale = Math.min(1, Math.sqrt(MAX_ANNOTATION_CANVAS_PIXELS / totalPixels));
+  const scale = Math.min(widthScale, heightScale, pixelScale);
+
+  return {
+    rejected: false,
+    scaled: scale < 0.999,
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale))
+  };
+}
+
+function drawAnnotationArrow(shape) {
+  const ctx = annotationState.ctx;
+  if (!ctx) return;
+  const angle = Math.atan2(shape.endY - shape.startY, shape.endX - shape.startX);
+  const headLength = Math.max(14, shape.lineWidth * 5);
+
+  ctx.save();
+  ctx.strokeStyle = shape.color;
+  ctx.fillStyle = shape.color;
+  ctx.lineWidth = shape.lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(shape.startX, shape.startY);
+  ctx.lineTo(shape.endX, shape.endY);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(shape.endX, shape.endY);
+  ctx.lineTo(
+    shape.endX - headLength * Math.cos(angle - Math.PI / 6),
+    shape.endY - headLength * Math.sin(angle - Math.PI / 6)
+  );
+  ctx.lineTo(
+    shape.endX - headLength * Math.cos(angle + Math.PI / 6),
+    shape.endY - headLength * Math.sin(angle + Math.PI / 6)
+  );
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawAnnotationRect(shape) {
+  const ctx = annotationState.ctx;
+  if (!ctx) return;
+  ctx.save();
+  ctx.strokeStyle = shape.color;
+  ctx.lineWidth = shape.lineWidth;
+  ctx.lineJoin = 'round';
+  ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
+  ctx.restore();
+}
+
+function drawAnnotationText(shape) {
+  const ctx = annotationState.ctx;
+  if (!ctx) return;
+  const lines = String(shape.text || '').split(/\r?\n/);
+  const lineHeight = Math.round(shape.fontSize * 1.35);
+
+  ctx.save();
+  ctx.fillStyle = shape.color;
+  ctx.font = `600 ${shape.fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  lines.forEach((line, index) => {
+    ctx.fillText(line, shape.x, shape.y + (index * lineHeight));
+  });
+  ctx.restore();
+}
+
+function drawAnnotationNumber(shape) {
+  const ctx = annotationState.ctx;
+  if (!ctx) return;
+  const radius = Math.max(16, Math.round(shape.fontSize * 0.9));
+
+  ctx.save();
+  ctx.fillStyle = shape.color;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = Math.max(2, Math.round(shape.lineWidth * 0.75));
+  ctx.beginPath();
+  ctx.arc(shape.x, shape.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `700 ${Math.max(14, Math.round(shape.fontSize * 0.9))}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(shape.label || ''), shape.x, shape.y + 0.5);
+  ctx.restore();
+}
+
+function drawAnnotationMosaic(shape) {
+  const ctx = annotationState.ctx;
+  const canvas = annotationState.canvas;
+  if (!ctx || !canvas || shape.width < 1 || shape.height < 1) return;
+
+  const pixelSize = Math.max(4, shape.pixelSize || 12);
+  const scaledWidth = Math.max(1, Math.round(shape.width / pixelSize));
+  const scaledHeight = Math.max(1, Math.round(shape.height / pixelSize));
+  const sampleCanvas = document.createElement('canvas');
+  sampleCanvas.width = scaledWidth;
+  sampleCanvas.height = scaledHeight;
+  const sampleCtx = sampleCanvas.getContext('2d');
+  if (!sampleCtx) return;
+
+  sampleCtx.imageSmoothingEnabled = true;
+  sampleCtx.drawImage(canvas, shape.x, shape.y, shape.width, shape.height, 0, 0, scaledWidth, scaledHeight);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(sampleCanvas, 0, 0, scaledWidth, scaledHeight, shape.x, shape.y, shape.width, shape.height);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(shape.x + 0.5, shape.y + 0.5, Math.max(0, shape.width - 1), Math.max(0, shape.height - 1));
+  ctx.restore();
+}
+
+function drawAnnotationShape(shape) {
+  if (!shape) return;
+  switch (shape.type) {
+    case 'arrow':
+      drawAnnotationArrow(shape);
+      return;
+    case 'rect':
+      drawAnnotationRect(shape);
+      return;
+    case 'text':
+      drawAnnotationText(shape);
+      return;
+    case 'number':
+      drawAnnotationNumber(shape);
+      return;
+    case 'mosaic':
+      drawAnnotationMosaic(shape);
+      return;
+    default:
+      return;
+  }
+}
+
+function redrawAnnotationCanvas() {
+  const canvas = annotationState.canvas;
+  const ctx = annotationState.ctx;
+  if (!canvas || !ctx) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!annotationState.image) return;
+
+  ctx.drawImage(annotationState.image, 0, 0, canvas.width, canvas.height);
+  annotationState.shapes.forEach(drawAnnotationShape);
+  if (annotationState.draftShape) drawAnnotationShape(annotationState.draftShape);
+}
+
+function syncAnnotationLayout() {
+  if (!annotationState.canvas) return;
+  if (annotationState.image) {
+    annotationState.canvas.style.width = `${annotationState.canvas.width}px`;
+    annotationState.canvas.style.height = `${annotationState.canvas.height}px`;
+    redrawAnnotationCanvas();
+  } else {
+    annotationState.canvas.style.width = '';
+    annotationState.canvas.style.height = '';
+  }
+  syncAnnotationEmptyState();
+  syncAnnotationActionButtons();
+  syncAnnotationTextEntry();
+}
+
+function moveAnnotationToolFocus(nextIndex, buttons) {
+  buttons.forEach((button, index) => {
+    button.tabIndex = index === nextIndex ? 0 : -1;
+  });
+  buttons[nextIndex]?.focus();
+}
+
+function setAnnotationTool(toolId, options = {}) {
+  const { focus = false } = options;
+  const nextTool = ['select', 'arrow', 'rect', 'text', 'number', 'mosaic'].includes(toolId)
+    ? toolId
+    : 'arrow';
+
+  annotationState.tool = nextTool;
+  const buttons = Array.from(document.querySelectorAll('[data-annotate-tool]'));
+  buttons.forEach((button, index) => {
+    const isActive = button.dataset.annotateTool === nextTool;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-checked', String(isActive));
+    button.tabIndex = isActive ? 0 : -1;
+    if (isActive && focus) {
+      button.focus();
+    }
+  });
+
+  if (nextTool !== 'text') {
+    clearPendingAnnotationText();
+  } else {
+    syncAnnotationTextEntry();
+  }
+
+  if (annotationState.canvas) {
+    annotationState.canvas.style.cursor = nextTool === 'select' ? 'default' : 'crosshair';
+  }
+}
+
+function handleAnnotationToolbarPointerSelection(event) {
+  const button = event.target.closest('[data-annotate-tool]');
+  if (!button) return;
+  setAnnotationTool(button.dataset.annotateTool);
+}
+
+function resetAnnotationDraft(repaint = true) {
+  annotationState.draftShape = null;
+  annotationState.dragStart = null;
+  annotationState.pointerId = null;
+  if (repaint) redrawAnnotationCanvas();
+}
+
+function commitAnnotationShape(shape) {
+  if (!shape) return;
+  annotationState.shapes.push(shape);
+  annotationState.undoneShapes = [];
+  annotationState.draftShape = null;
+  syncAnnotationActionButtons();
+  redrawAnnotationCanvas();
+}
+
+function getNextAnnotationNumberLabel() {
+  return String(annotationState.shapes.filter(shape => shape.type === 'number').length + 1);
+}
+
+function beginAnnotationTextEntry(point) {
+  annotationState.textEntryPoint = point;
+  syncAnnotationTextEntry();
+  setAnnotationMessage(t('annotate.textPending'), 'success');
+  clearAnnotationMessageLater();
+}
+
+function applyPendingAnnotationText() {
+  if (!annotationState.textEntryPoint) return;
+  const controls = getAnnotationTextControlIds();
+  const text = String(controls.input?.value || '').trim();
+  if (!text) {
+    setAnnotationMessage(t('annotate.textEmptyError'), 'error');
+    clearAnnotationMessageLater();
+    return;
+  }
+
+  commitAnnotationShape({
+    type: 'text',
+    x: annotationState.textEntryPoint.x,
+    y: annotationState.textEntryPoint.y,
+    text,
+    color: annotationState.color,
+    fontSize: annotationState.fontSize
+  });
+  clearPendingAnnotationText();
+  setAnnotationMessage(t('annotate.textApplied'), 'success');
+  clearAnnotationMessageLater();
+}
+
+function cancelPendingAnnotationText() {
+  if (!annotationState.textEntryPoint) return;
+  clearPendingAnnotationText();
+  setAnnotationMessage(t('annotate.textCancelled'), 'success');
+  clearAnnotationMessageLater();
+}
+
+function createNumberAnnotationAt(point) {
+  commitAnnotationShape({
+    type: 'number',
+    x: point.x,
+    y: point.y,
+    label: getNextAnnotationNumberLabel(),
+    color: annotationState.color,
+    fontSize: annotationState.fontSize,
+    lineWidth: annotationState.lineWidth
+  });
+}
+
+function finishAnnotationDrag(event) {
+  const canvas = annotationState.canvas;
+  if (!canvas || annotationState.pointerId == null) return;
+
+  const point = getAnnotationCanvasPoint(event);
+  if (canvas.hasPointerCapture && canvas.hasPointerCapture(annotationState.pointerId)) {
+    canvas.releasePointerCapture(annotationState.pointerId);
+  }
+
+  const draftShape = point && annotationState.dragStart
+    ? buildAnnotationShape(annotationState.tool, annotationState.dragStart, point)
+    : null;
+
+  annotationState.draftShape = null;
+  annotationState.dragStart = null;
+  annotationState.pointerId = null;
+
+  if (isMeaningfulAnnotationShape(draftShape)) {
+    commitAnnotationShape(draftShape);
+    return;
+  }
+
+  redrawAnnotationCanvas();
+}
+
+function onAnnotationCanvasPointerDown(event) {
+  if (!annotationState.image || !annotationState.canvas) {
+    setAnnotationMessage(t('annotate.messageUploadFirst'), 'error');
+    clearAnnotationMessageLater();
+    return;
+  }
+
+  const point = getAnnotationCanvasPoint(event);
+  if (!point) return;
+  setAnnotationMessage('');
+
+  if (annotationState.tool === 'text') {
+    beginAnnotationTextEntry(point);
+    return;
+  }
+
+  if (annotationState.tool === 'number') {
+    createNumberAnnotationAt(point);
+    return;
+  }
+
+  if (!ANNOTATION_DRAG_TOOLS.has(annotationState.tool)) {
+    return;
+  }
+
+  annotationState.dragStart = point;
+  annotationState.pointerId = event.pointerId;
+  annotationState.draftShape = buildAnnotationShape(annotationState.tool, point, point);
+  if (annotationState.canvas.setPointerCapture) {
+    annotationState.canvas.setPointerCapture(event.pointerId);
+  }
+  redrawAnnotationCanvas();
+}
+
+function onAnnotationCanvasPointerMove(event) {
+  if (annotationState.pointerId == null || annotationState.pointerId !== event.pointerId || !annotationState.dragStart) return;
+  const point = getAnnotationCanvasPoint(event);
+  if (!point) return;
+  annotationState.draftShape = buildAnnotationShape(annotationState.tool, annotationState.dragStart, point);
+  redrawAnnotationCanvas();
+}
+
+function onAnnotationCanvasPointerUp(event) {
+  if (annotationState.pointerId == null || annotationState.pointerId !== event.pointerId) return;
+  finishAnnotationDrag(event);
+}
+
+function onAnnotationCanvasPointerCancel(event) {
+  if (annotationState.pointerId == null || annotationState.pointerId !== event.pointerId) return;
+  const canvas = annotationState.canvas;
+  if (canvas && canvas.hasPointerCapture && canvas.hasPointerCapture(annotationState.pointerId)) {
+    canvas.releasePointerCapture(annotationState.pointerId);
+  }
+  resetAnnotationDraft(true);
+}
+
+function onAnnotationToolbarKeydown(event) {
+  const buttons = Array.from(document.querySelectorAll('[data-annotate-tool]'));
+  const currentIndex = buttons.findIndex(button => button.dataset.annotateTool === annotationState.tool);
+  if (currentIndex === -1) return;
+
+  let nextIndex = currentIndex;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = (currentIndex + 1) % buttons.length;
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+  } else if (event.key === 'Home') {
+    nextIndex = 0;
+  } else if (event.key === 'End') {
+    nextIndex = buttons.length - 1;
+  } else {
+    return;
+  }
+
+  event.preventDefault();
+  const nextTool = buttons[nextIndex]?.dataset.annotateTool;
+  if (!nextTool) return;
+  setAnnotationTool(nextTool);
+  moveAnnotationToolFocus(nextIndex, buttons);
+}
+
+function resetAnnotationHistoryForImage() {
+  annotationState.shapes = [];
+  annotationState.undoneShapes = [];
+  annotationState.draftShape = null;
+  annotationState.dragStart = null;
+  annotationState.pointerId = null;
+  clearPendingAnnotationText();
+}
+
+function loadAnnotationImageFile(file) {
+  if (!file) return;
+  if (!ANNOTATION_SUPPORTED_TYPES.test(file.type || '')) {
+    setAnnotationMessage(t('annotate.invalidFormat'), 'error');
+    clearAnnotationMessageLater();
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const image = new Image();
+    image.onload = () => {
+      const target = getAnnotationLoadTargetSize(image.width, image.height);
+      if (target.rejected) {
+        setAnnotationMessage(t('annotate.imageTooLargeReject', { width: image.width, height: image.height }), 'error');
+        clearAnnotationMessageLater(3200);
+        return;
+      }
+
+      annotationState.image = image;
+      annotationState.fileName = file.name || 'annotated-screenshot';
+      resetAnnotationHistoryForImage();
+      if (annotationState.canvas) {
+        annotationState.canvas.width = target.width;
+        annotationState.canvas.height = target.height;
+      }
+      setAnnotationMessage(target.scaled
+        ? t('annotate.imageScaled', { width: target.width, height: target.height })
+        : ''
+      , target.scaled ? 'success' : '');
+      syncAnnotationLayout();
+      redrawAnnotationCanvas();
+      clearAnnotationMessageLater(target.scaled ? 2800 : 0);
+    };
+    image.onerror = () => {
+      setAnnotationMessage(t('annotate.loadFailed'), 'error');
+      clearAnnotationMessageLater();
+    };
+    image.src = String(reader.result || '');
+  };
+  reader.onerror = () => {
+    setAnnotationMessage(t('annotate.readFailed'), 'error');
+    clearAnnotationMessageLater();
+  };
+  reader.readAsDataURL(file);
+}
+
+function onAnnotationFileChange(event) {
+  const input = event && event.target ? event.target : null;
+  const file = input && input.files ? input.files[0] : null;
+  if (!file) return;
+  loadAnnotationImageFile(file);
+  if (input) input.value = '';
+}
+
+function onAnnotationDrop(event) {
+  if (typeof event.preventDefault === 'function') event.preventDefault();
+  const file = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+  if (!file) return;
+  loadAnnotationImageFile(file);
+}
+
+function undoAnnotation() {
+  const shape = annotationState.shapes.pop();
+  if (!shape) return;
+  annotationState.undoneShapes.push(shape);
+  clearPendingAnnotationText();
+  syncAnnotationActionButtons();
+  redrawAnnotationCanvas();
+}
+
+function redoAnnotation() {
+  const shape = annotationState.undoneShapes.pop();
+  if (!shape) return;
+  annotationState.shapes.push(shape);
+  syncAnnotationActionButtons();
+  redrawAnnotationCanvas();
+}
+
+function clearAllAnnotations() {
+  if (!annotationState.image) {
+    setAnnotationMessage(t('annotate.clearMissing'), 'error');
+    clearAnnotationMessageLater();
+    return;
+  }
+
+  resetAnnotationHistoryForImage();
+  syncAnnotationActionButtons();
+  redrawAnnotationCanvas();
+  setAnnotationMessage(t('annotate.clearSuccess'), 'success');
+  clearAnnotationMessageLater();
+}
+
+function exportAnnotationImage() {
+  if (!annotationState.canvas || !annotationState.image) {
+    setAnnotationMessage(t('annotate.exportMissing'), 'error');
+    clearAnnotationMessageLater();
+    return;
+  }
+
+  redrawAnnotationCanvas();
+  annotationState.canvas.toBlob(blob => {
+    if (!blob) {
+      setAnnotationMessage(t('annotate.exportFailed'), 'error');
+      clearAnnotationMessageLater();
+      return;
+    }
+
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const baseName = (annotationState.fileName || 'annotated-screenshot').replace(/\.[^.]+$/, '');
+    link.href = url;
+    link.download = `${baseName}-annotated.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setAnnotationMessage(t('annotate.exportSuccess'), 'success');
+    clearAnnotationMessageLater();
+  }, 'image/png');
+}
+
+function initAnnotationTool() {
+  if (annotationState.initialized) return;
+
+  annotationState.canvas = document.getElementById('annotate-canvas');
+  annotationState.ctx = annotationState.canvas ? annotationState.canvas.getContext('2d') : null;
+  const fileInput = document.getElementById('annotate-input');
+  const dropzone = document.getElementById('annotate-dropzone');
+  const toolbar = document.querySelector('.annotate-toolbar');
+  const colorInput = document.getElementById('annotate-color');
+  const lineWidthInput = document.getElementById('annotate-line-width');
+  const fontSizeInput = document.getElementById('annotate-font-size');
+  const textControls = getAnnotationTextControlIds();
+
+  if (!annotationState.canvas || !annotationState.ctx) return;
+
+  if (fileInput) fileInput.addEventListener('change', onAnnotationFileChange);
+  if (dropzone) {
+    dropzone.addEventListener('dragover', event => event.preventDefault());
+    dropzone.addEventListener('drop', onAnnotationDrop);
+  }
+  if (toolbar) {
+    toolbar.addEventListener('keydown', onAnnotationToolbarKeydown);
+  }
+
+  document.querySelectorAll('[data-annotate-tool]').forEach(button => {
+    button.addEventListener('click', () => setAnnotationTool(button.dataset.annotateTool));
+    button.addEventListener('pointerdown', handleAnnotationToolbarPointerSelection);
+  });
+
+  if (colorInput) {
+    annotationState.color = colorInput.value || annotationState.color;
+    colorInput.addEventListener('input', event => {
+      annotationState.color = event.target.value || annotationState.color;
+    });
+  }
+
+  if (lineWidthInput) {
+    annotationState.lineWidth = Number(lineWidthInput.value) || annotationState.lineWidth;
+    lineWidthInput.addEventListener('input', event => {
+      annotationState.lineWidth = Number(event.target.value) || annotationState.lineWidth;
+    });
+  }
+
+  if (fontSizeInput) {
+    annotationState.fontSize = Number(fontSizeInput.value) || annotationState.fontSize;
+    fontSizeInput.addEventListener('input', event => {
+      annotationState.fontSize = Number(event.target.value) || annotationState.fontSize;
+    });
+  }
+
+  if (textControls.apply) {
+    textControls.apply.addEventListener('click', applyPendingAnnotationText);
+  }
+  if (textControls.cancel) {
+    textControls.cancel.addEventListener('click', cancelPendingAnnotationText);
+  }
+  if (textControls.input) {
+    textControls.input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applyPendingAnnotationText();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        cancelPendingAnnotationText();
+      }
+    });
+  }
+
+  annotationState.canvas.addEventListener('pointerdown', onAnnotationCanvasPointerDown);
+  annotationState.canvas.addEventListener('pointermove', onAnnotationCanvasPointerMove);
+  annotationState.canvas.addEventListener('pointerup', onAnnotationCanvasPointerUp);
+  annotationState.canvas.addEventListener('pointercancel', onAnnotationCanvasPointerCancel);
+
+  document.getElementById('annotate-undo')?.addEventListener('click', undoAnnotation);
+  document.getElementById('annotate-redo')?.addEventListener('click', redoAnnotation);
+  document.getElementById('annotate-clear')?.addEventListener('click', clearAllAnnotations);
+  document.getElementById('annotate-export')?.addEventListener('click', exportAnnotationImage);
+
+  annotationState.initialized = true;
+  setAnnotationTool(annotationState.tool);
+  syncAnnotationLayout();
+}
+
+function getTextCardDom() {
+  return {
+    input: document.getElementById('card-text-input'),
+    theme: document.getElementById('card-theme'),
+    size: document.getElementById('card-size'),
+    preview: document.getElementById('card-preview'),
+    content: document.getElementById('card-preview-content'),
+    message: document.getElementById('card-message'),
+    exportButton: document.getElementById('card-export'),
+    copyButton: document.getElementById('card-copy-image'),
+    clearButton: document.getElementById('card-clear')
+  };
+}
+
+function canCopyTextCardImage() {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  if (!window.isSecureContext || typeof window.ClipboardItem === 'undefined') return false;
+  if (!navigator.clipboard || typeof navigator.clipboard.write !== 'function') return false;
+  if (typeof window.ClipboardItem.supports === 'function' && !window.ClipboardItem.supports('image/png')) return false;
+  return true;
+}
+
+function updateTextCardCopySupportState() {
+  textCardState.copySupported = canCopyTextCardImage();
+  return textCardState.copySupported;
+}
+
+function setTextCardMessageState(messageKey = '', type = '', params = {}) {
+  textCardState.messageKey = messageKey || '';
+  textCardState.messageType = type || '';
+  textCardState.messageParams = params && typeof params === 'object' ? params : {};
+  renderTextCardMessage();
+}
+
+function renderTextCardMessage() {
+  const node = document.getElementById('card-message');
+  if (!node) return;
+  const hasMessage = Boolean(textCardState.messageKey);
+  const type = textCardState.messageType || '';
+  node.textContent = hasMessage ? t(textCardState.messageKey, textCardState.messageParams) : '';
+  node.dataset.type = type;
+}
+
+function clearTextCardMessageLater(delay = 2200) {
+  if (textCardState.messageTimer) {
+    clearTimeout(textCardState.messageTimer);
+    textCardState.messageTimer = null;
+  }
+  if (!delay) return;
+  textCardState.messageTimer = setTimeout(() => {
+    setTextCardMessageState('');
+    textCardState.messageTimer = null;
+  }, delay);
+}
+
+function getTextCardSizeMeta(size = textCardState.size) {
+  return TEXT_CARD_EXPORT_DIMENSIONS[size] || TEXT_CARD_EXPORT_DIMENSIONS.square;
+}
+
+function wrapTextCardLines(ctx, text, maxWidth) {
+  const source = String(text || '').replace(/\r\n/g, '\n');
+  const segments = source.split('\n');
+  const lines = [];
+
+  segments.forEach(segment => {
+    if (!segment) {
+      lines.push('');
+      return;
+    }
+
+    let current = '';
+    for (const char of Array.from(segment)) {
+      const trial = current + char;
+      if (current && ctx.measureText(trial).width > maxWidth) {
+        lines.push(current);
+        current = char;
+      } else {
+        current = trial;
+      }
+    }
+    lines.push(current);
+  });
+
+  return lines;
+}
+
+function layoutTextCardContent(text, size = textCardState.size) {
+  const content = String(text ?? '');
+  const { width, height } = getTextCardSizeMeta(size);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const horizontalPadding = Math.round(width * 0.08);
+  const topPadding = Math.round(height * 0.15);
+  const bottomPadding = Math.round(height * 0.08);
+  const maxWidth = width - (horizontalPadding * 2);
+  const fontSize = Math.max(28, Math.round(Math.min(width, height) * 0.04));
+  const lineHeight = Math.round(fontSize * 1.6);
+  ctx.font = `${fontSize}px ui-monospace, SFMono-Regular, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace`;
+
+  const rawLines = wrapTextCardLines(ctx, content, maxWidth);
+  const availableHeight = height - topPadding - bottomPadding;
+  const maxLines = Math.max(1, Math.floor(availableHeight / lineHeight));
+  const renderedLines = rawLines.slice(0, maxLines);
+  const truncated = rawLines.length > maxLines;
+
+  if (truncated && renderedLines.length) {
+    const lastIndex = renderedLines.length - 1;
+    const suffix = '…';
+    let truncatedLine = renderedLines[lastIndex];
+    while (truncatedLine && ctx.measureText(truncatedLine + suffix).width > maxWidth) {
+      truncatedLine = truncatedLine.slice(0, -1);
+    }
+    renderedLines[lastIndex] = `${truncatedLine || ''}${suffix}`;
+  }
+
+  return {
+    width,
+    height,
+    horizontalPadding,
+    topPadding,
+    maxWidth,
+    fontSize,
+    lineHeight,
+    renderedLines,
+    truncated
+  };
+}
+
+function syncTextCardCopyButton() {
+  const { copyButton } = getTextCardDom();
+  if (!copyButton) return;
+  const supported = updateTextCardCopySupportState();
+  copyButton.disabled = !supported;
+  copyButton.setAttribute('aria-disabled', String(!supported));
+  if (supported) {
+    copyButton.removeAttribute('title');
+    copyButton.dataset.i18n = 'card.copyImage';
+    copyButton.textContent = t('card.copyImage');
+  } else {
+    copyButton.setAttribute('title', t('card.copyUnavailable'));
+    copyButton.removeAttribute('data-i18n');
+    copyButton.textContent = t('card.copyImageUnsupported');
+  }
+}
+
+function renderTextCardPreview() {
+  const { preview, content, input, theme, size } = getTextCardDom();
+  if (!preview || !content) return;
+
+  preview.classList.toggle('share-card--dark', textCardState.theme === 'dark');
+  preview.classList.toggle('share-card--light', textCardState.theme === 'light');
+  preview.dataset.size = textCardState.size;
+
+  const hasContent = String(textCardState.text ?? '').length > 0;
+  const layout = hasContent ? layoutTextCardContent(textCardState.text, textCardState.size) : null;
+  textCardState.lastLayout = layout;
+  preview.classList.toggle('share-card--empty', !hasContent);
+  content.classList.toggle('share-card-content--empty', !hasContent);
+  content.textContent = hasContent && layout ? layout.renderedLines.join('\n') : t('card.emptyPreview');
+
+  if (input && input.value !== textCardState.text) input.value = textCardState.text;
+  if (theme && theme.value !== textCardState.theme) theme.value = textCardState.theme;
+  if (size && size.value !== textCardState.size) size.value = textCardState.size;
+
+  syncTextCardCopyButton();
+  renderTextCardMessage();
+}
+
+function canvasToBlob(canvas, type = 'image/png', quality) {
+  return new Promise(resolve => {
+    if (!canvas || typeof canvas.toBlob !== 'function') {
+      resolve(null);
+      return;
+    }
+    canvas.toBlob(blob => resolve(blob || null), type, quality);
+  });
+}
+
+async function buildTextCardBlob() {
+  if (!String(textCardState.text || '').trim()) return null;
+
+  const layout = layoutTextCardContent(textCardState.text, textCardState.size);
+  if (!layout) return null;
+  const { width, height } = layout;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const isDark = textCardState.theme === 'dark';
+  const background = ctx.createLinearGradient(0, 0, width, height);
+  if (isDark) {
+    background.addColorStop(0, '#111827');
+    background.addColorStop(1, '#1f2937');
+  } else {
+    background.addColorStop(0, '#ffffff');
+    background.addColorStop(1, '#f3f4f6');
+  }
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.10)';
+  const dotSize = Math.max(4, Math.round(width * 0.004));
+  const dotGap = Math.max(22, Math.round(width * 0.045));
+  const dotY = Math.round(height * 0.07);
+  const dotX = Math.round(width * 0.08);
+  [0, 1, 2].forEach(index => {
+    ctx.beginPath();
+    ctx.arc(dotX + (index * dotGap), dotY, dotSize, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.fillStyle = isDark ? '#f9fafb' : '#111827';
+  ctx.font = `${layout.fontSize}px ui-monospace, SFMono-Regular, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace`;
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  layout.renderedLines.forEach((line, index) => {
+    ctx.fillText(line, layout.horizontalPadding, layout.topPadding + (index * layout.lineHeight));
+  });
+
+  return canvasToBlob(canvas, 'image/png');
+}
+
+async function exportTextCardImage() {
+  if (!String(textCardState.text || '').trim()) {
+    setTextCardMessageState('card.emptyInput', 'error');
+    clearTextCardMessageLater();
+    return;
+  }
+
+  try {
+    const blob = await buildTextCardBlob();
+    if (!blob) {
+      setTextCardMessageState('card.exportFailed', 'error');
+      clearTextCardMessageLater(2800);
+      return;
+    }
+
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = 'text-card.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setTextCardMessageState('card.exportSuccess', 'success');
+    clearTextCardMessageLater();
+  } catch {
+    setTextCardMessageState('card.exportFailed', 'error');
+    clearTextCardMessageLater();
+  }
+}
+
+async function copyTextCardImage() {
+  if (!String(textCardState.text || '').trim()) {
+    setTextCardMessageState('card.emptyInput', 'error');
+    clearTextCardMessageLater();
+    return;
+  }
+
+  if (!updateTextCardCopySupportState()) {
+    setTextCardMessageState('card.copyUnavailable', 'error');
+    clearTextCardMessageLater(2800);
+    renderTextCardPreview();
+    return;
+  }
+
+  try {
+    const blob = await buildTextCardBlob();
+    if (!blob) {
+      setTextCardMessageState('card.exportFailed', 'error');
+      clearTextCardMessageLater();
+      return;
+    }
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    setTextCardMessageState('card.copySuccess', 'success');
+    clearTextCardMessageLater();
+  } catch {
+    setTextCardMessageState('card.copyFailed', 'error');
+    clearTextCardMessageLater(2800);
+  }
+}
+
+function clearTextCardTool() {
+  textCardState.text = '';
+  textCardState.theme = 'dark';
+  textCardState.size = 'square';
+  renderTextCardPreview();
+  setTextCardMessageState('card.clearSuccess', 'success');
+  clearTextCardMessageLater();
+}
+
+function initTextCardTool() {
+  if (textCardState.initialized) return;
+  const dom = getTextCardDom();
+  if (!dom.input || !dom.preview || !dom.content) return;
+
+  textCardState.text = dom.input.value || '';
+  textCardState.theme = dom.theme?.value || textCardState.theme;
+  textCardState.size = dom.size?.value || textCardState.size;
+
+  dom.input.addEventListener('input', event => {
+    textCardState.text = event.target.value || '';
+    setTextCardMessageState('');
+    clearTextCardMessageLater(0);
+    renderTextCardPreview();
+  });
+
+  dom.theme?.addEventListener('change', event => {
+    textCardState.theme = event.target.value || 'dark';
+    renderTextCardPreview();
+  });
+
+  dom.size?.addEventListener('change', event => {
+    textCardState.size = event.target.value || 'square';
+    renderTextCardPreview();
+  });
+
+  dom.exportButton?.addEventListener('click', exportTextCardImage);
+  dom.copyButton?.addEventListener('click', copyTextCardImage);
+  dom.clearButton?.addEventListener('click', clearTextCardTool);
+
+  textCardState.initialized = true;
+  renderTextCardPreview();
+}
 
 /* === JSON 工具 === */
 function formatJSON() {
@@ -3239,9 +5158,19 @@ if (convertDropzone) {
   convertDropzone.addEventListener('drop', onConvertDrop);
 }
 
+document.getElementById('clear-recent-tools')?.addEventListener('click', () => {
+  clearRecentTools();
+});
+
+initAnnotationTool();
+initTextCardTool();
+
 window.addEventListener('resize', () => {
   if (imageToolState.image) {
     drawImageEditor();
+  }
+  if (annotationState.image) {
+    syncAnnotationLayout();
   }
 });
 
@@ -3883,7 +5812,14 @@ loadColorHistory();
 updateAllColor(colorState.hex, colorState.alpha);
 renderColorHistory();
 renderColorSchemes();
+renderToolNavigation();
 applyI18n();
+syncToolRegistryState();
+syncDiscoveryPanels();
+syncTabSemantics(document.querySelector('.tab.active')?.dataset.tool || TOOL_REGISTRY[0]?.id || 'timestamp');
+renderRecommendedTools();
+renderRecentTools();
+renderFavoriteTools();
 onImageQualityChange();
 renderImageQueue();
 updateImageCompressionSummary();
@@ -3894,3 +5830,4 @@ onConvertTypeChange();
 updateConvertAdvancedOptions();
 updateConvertButtons();
 applySupportLinks();
+localizedUiReady = true;

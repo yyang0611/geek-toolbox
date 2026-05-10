@@ -11,34 +11,91 @@
 </head>
 <body>
   <header class="header">
-    <div class="header-bar">
-      <div class="header-copy">
-        <div class="logo" data-i18n="header.logo">⚡ 极客工具箱</div>
-        <p class="subtitle" data-i18n="header.subtitle">在线开发工具 · 浏览器本地运行，你的数据不上传</p>
+      <div class="header-bar">
+        <div class="header-copy">
+          <div class="logo" data-i18n="header.logo">⚡ 极客工具箱</div>
+          <p class="subtitle" data-i18n="header.subtitle">在线开发工具 · 浏览器本地运行，你的数据不上传</p>
+        </div>
+        <div class="header-actions">
+          <p class="support-entry-hint" data-i18n="support.entryHint">有新增需求或优化建议？欢迎随时告诉我</p>
+          <button class="support-entry-btn" type="button" onclick="showSupport()" data-i18n="support.entryCta">联系 / 打赏</button>
+          <div class="lang-switcher" data-i18n-aria-label="header.languageSwitcherLabel" aria-label="语言切换">
+            <button id="lang-zh-CN" class="lang-btn" type="button" onclick="setLanguage('zh-CN')" data-i18n="header.languageZh">中文</button>
+            <button id="lang-en" class="lang-btn" type="button" onclick="setLanguage('en')" data-i18n="header.languageEn">EN</button>
+          </div>
+        </div>
       </div>
-      <div class="lang-switcher" data-i18n-aria-label="header.languageSwitcherLabel" aria-label="语言切换">
-        <button id="lang-zh-CN" class="lang-btn" type="button" onclick="setLanguage('zh-CN')" data-i18n="header.languageZh">中文</button>
-        <button id="lang-en" class="lang-btn" type="button" onclick="setLanguage('en')" data-i18n="header.languageEn">EN</button>
-      </div>
-    </div>
   </header>
 
-  <nav class="tabs" id="tabs">
-    <button class="tab active" data-tool="timestamp" data-i18n="tabs.timestamp">Timestamp</button>
-    <button class="tab" data-tool="image" data-i18n="tabs.image">Image Compress</button>
-    <button class="tab" data-tool="convert" data-i18n="tabs.convert">File Convert</button>
-    <button class="tab" data-tool="json" data-i18n="tabs.json">JSON Format</button>
-    <button class="tab" data-tool="diff" data-i18n="tabs.diff">Text Diff</button>
-    <button class="tab" data-tool="base64" data-i18n="tabs.base64">Base64</button>
-    <button class="tab" data-tool="count" data-i18n="tabs.count">Text Count</button>
-    <button class="tab" data-tool="url" data-i18n="tabs.url">URL Encode/Decode</button>
-    <button class="tab" data-tool="regex" data-i18n="tabs.regex">Regex Tester</button>
-    <button class="tab" data-tool="jwt" data-i18n="tabs.jwt">JWT Decoder</button>
-    <button class="tab" data-tool="yaml" data-i18n="tabs.yaml">YAML ↔ JSON</button>
-    <button class="tab" data-tool="color" data-i18n="tabs.color">Color Converter</button>
-  </nav>
+  <div class="app-shell container">
+    <aside class="discovery-shell" id="discovery-shell" data-i18n-aria-label="home.discoveryShellAriaLabel" aria-label="Tool discovery">
+      <div class="discovery-sidebar-header">
+        <p class="section-eyebrow" data-i18n="home.discoveryEyebrow">Discover</p>
+        <h2 data-i18n="home.sidebarTitle">Quick Access</h2>
+        <p class="section-description" data-i18n="home.sidebarSubtitle">Collapse recommendation, favorites, and recent history to keep the workspace focused.</p>
+      </div>
 
-  <main class="container">
+      <section class="discovery-accordion-section" data-i18n-aria-label="home.recommendedSectionAriaLabel" aria-label="Recommended tools">
+        <button class="discovery-accordion-trigger" type="button" data-accordion-target="recommended-tools-panel" aria-expanded="true">
+          <span class="discovery-accordion-copy">
+            <span class="discovery-accordion-title-row">
+              <span class="discovery-accordion-title" data-i18n="home.recommendedTitle">Recommended</span>
+              <span class="discovery-count-badge" id="recommended-tools-count">0</span>
+            </span>
+            <span class="discovery-accordion-subtitle" data-i18n="home.recommendedSubtitle">Preview featured workflows and keep the tab rail ready for the tools you use every day.</span>
+          </span>
+          <span class="discovery-accordion-icon" aria-hidden="true">⌄</span>
+        </button>
+        <div class="discovery-accordion-panel" id="recommended-tools-panel">
+          <div class="hero-tool-grid" id="recommended-tools"></div>
+        </div>
+      </section>
+
+      <section class="discovery-accordion-section" data-i18n-aria-label="home.favoriteSectionAriaLabel" aria-label="Favorite tools">
+        <button class="discovery-accordion-trigger" type="button" data-accordion-target="favorite-tools-panel" aria-expanded="false">
+          <span class="discovery-accordion-copy">
+            <span class="discovery-accordion-title-row">
+              <span class="discovery-accordion-title" data-i18n="home.favoriteTitle">Favorite Tools</span>
+              <span class="discovery-count-badge" id="favorite-tools-count">0</span>
+            </span>
+            <span class="discovery-accordion-subtitle" data-i18n="home.favoriteSubtitle">Favorite shortcuts will live here once reusable card actions are connected.</span>
+          </span>
+          <span class="discovery-accordion-icon" aria-hidden="true">⌄</span>
+        </button>
+        <div class="discovery-accordion-panel is-collapsed" id="favorite-tools-panel" hidden>
+          <div class="discovery-card-grid" id="favorite-tools">
+            <div class="discovery-empty" data-i18n="home.favoriteEmpty">Mark commonly used tools as favorites after the homepage card actions are implemented.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="discovery-accordion-section" data-i18n-aria-label="home.recentSectionAriaLabel" aria-label="Recent tools">
+        <button class="discovery-accordion-trigger" type="button" data-accordion-target="recent-tools-panel" aria-expanded="false">
+          <span class="discovery-accordion-copy">
+            <span class="discovery-accordion-title-row">
+              <span class="discovery-accordion-title" data-i18n="home.recentTitle">Recent Tools</span>
+              <span class="discovery-count-badge" id="recent-tools-count">0</span>
+            </span>
+            <span class="discovery-accordion-subtitle" data-i18n="home.recentSubtitle">Your latest launches will surface here after the retention logic is wired in.</span>
+          </span>
+          <span class="discovery-accordion-icon" aria-hidden="true">⌄</span>
+        </button>
+        <div class="discovery-accordion-panel is-collapsed" id="recent-tools-panel" hidden>
+          <div class="discovery-panel-actions">
+            <button class="discovery-inline-status" type="button" id="clear-recent-tools" data-i18n="home.clearRecent">Clear</button>
+          </div>
+          <div class="discovery-card-grid" id="recent-tools">
+            <div class="discovery-empty" data-i18n="home.recentEmpty">Open any tool from the tab rail to populate this section in the next task.</div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <div class="workspace-shell">
+      <nav class="tabs" id="tabs" data-i18n-aria-label="home.toolNavAriaLabel" aria-label="Tool categories"></nav>
+
+      <main id="tool-workspace">
+
     <section id="tool-json" class="tool-panel">
       <h2 data-i18n="json.title">Format / Validate JSON</h2>
       <textarea id="json-input" class="code-input" data-i18n-placeholder="json.placeholder" placeholder="Paste JSON here..." spellcheck="false"></textarea>
@@ -127,7 +184,7 @@
             <option value="">(none)</option>
           </select>
           <div class="regex-badge" id="regex-badge"><span id="regex-count">0</span></div>
-          <button class="btn outline small" onclick="clearRegex()" title="Clear">✕</button>
+          <button class="btn outline small" onclick="clearRegex()" data-i18n-title="regex.clearTitle" title="Clear">✕</button>
         </div>
         <div id="regex-error" class="regex-error"></div>
       </div>
@@ -285,6 +342,122 @@
               <button class="color-swatch" style="background:#2d3436" onclick="applyColorSwatch('#2d3436')"></button>
               <button class="color-swatch" style="background:#ffffff" onclick="applyColorSwatch('#ffffff')"></button>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-annotate" class="tool-panel">
+      <h2 data-i18n="tabs.annotate">Screenshot Annotation</h2>
+      <p class="panel-subtitle" data-i18n="toolCards.annotate">Add arrows, labels, and blur-ready callouts to screenshots.</p>
+      <div class="annotate-layout">
+        <aside class="annotate-sidebar annotate-surface" data-i18n-aria-label="Annotation controls" aria-label="Annotation controls">
+          <div class="annotate-dropzone" id="annotate-dropzone">
+            <div class="annotate-dropzone-copy">
+              <span class="annotate-dropzone-title" data-i18n="annotate.uploadTitle">Upload screenshot</span>
+              <small id="annotate-upload-hint" data-i18n="annotate.uploadHint">PNG, JPG, WEBP</small>
+            </div>
+            <input
+              id="annotate-input"
+              class="annotate-file-input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              aria-describedby="annotate-upload-hint"
+              data-i18n-aria-label="annotate.uploadInputAria"
+              aria-label="Upload screenshot file"
+            />
+          </div>
+
+          <div class="annotate-toolbar" role="radiogroup" data-i18n-aria-label="annotate.toolbarAria" aria-label="Annotation tools">
+            <button class="btn outline annotate-tool-chip is-active" type="button" data-annotate-tool="select" role="radio" aria-checked="true" data-i18n="annotate.tools.select">Select</button>
+            <button class="btn outline annotate-tool-chip" type="button" data-annotate-tool="arrow" role="radio" aria-checked="false" data-i18n="annotate.tools.arrow">Arrow</button>
+            <button class="btn outline annotate-tool-chip" type="button" data-annotate-tool="rect" role="radio" aria-checked="false" data-i18n="annotate.tools.rect">Rectangle</button>
+            <button class="btn outline annotate-tool-chip" type="button" data-annotate-tool="text" role="radio" aria-checked="false" data-i18n="annotate.tools.text">Text</button>
+            <button class="btn outline annotate-tool-chip" type="button" data-annotate-tool="number" role="radio" aria-checked="false" data-i18n="annotate.tools.number">Number</button>
+            <button class="btn outline annotate-tool-chip" type="button" data-annotate-tool="mosaic" role="radio" aria-checked="false" data-i18n="annotate.tools.mosaic">Mosaic</button>
+          </div>
+
+          <div class="annotate-controls" data-i18n-aria-label="annotate.settingsAria" aria-label="Annotation settings">
+            <div class="annotate-control-group">
+              <label class="label" for="annotate-color" data-i18n="annotate.color">Color</label>
+              <input id="annotate-color" type="color" value="#ff4757" />
+            </div>
+
+            <div class="annotate-control-group">
+              <label class="label" for="annotate-line-width" data-i18n="annotate.lineWidth">Line Width</label>
+              <input id="annotate-line-width" type="range" min="1" max="8" value="3" />
+            </div>
+
+            <div class="annotate-control-group">
+              <label class="label" for="annotate-font-size" data-i18n="annotate.fontSize">Font Size</label>
+              <input id="annotate-font-size" type="range" min="12" max="32" value="18" />
+            </div>
+
+            <div id="annotate-text-entry" class="annotate-control-group hidden">
+              <label class="label" for="annotate-text-input" data-i18n="annotate.textPromptLabel">Text</label>
+              <input id="annotate-text-input" class="ts-input" type="text" data-i18n-placeholder="annotate.textPromptPlaceholder" placeholder="Enter annotation text" />
+              <div class="btn-row">
+                <button class="btn primary small" type="button" id="annotate-text-apply" data-i18n="annotate.applyText">Apply</button>
+                <button class="btn outline small" type="button" id="annotate-text-cancel" data-i18n="annotate.cancelText">Cancel</button>
+              </div>
+              <p id="annotate-text-hint" class="hint" data-i18n="annotate.textPromptHint">Click the screenshot to place text, then apply it here.</p>
+            </div>
+          </div>
+
+          <div class="btn-row annotate-actions">
+            <button class="btn" type="button" id="annotate-undo" data-i18n="annotate.undo">Undo</button>
+            <button class="btn" type="button" id="annotate-redo" data-i18n="annotate.redo">Redo</button>
+            <button class="btn red" type="button" id="annotate-clear" data-i18n="annotate.clearAll">Clear All</button>
+            <button class="btn primary" type="button" id="annotate-export" data-i18n="annotate.export">Export PNG</button>
+          </div>
+
+          <div id="annotate-message" class="error-msg" aria-live="polite"></div>
+        </aside>
+
+        <div class="annotate-canvas-shell annotate-surface" data-i18n-aria-label="annotate.canvasAria" aria-label="Annotation canvas workspace">
+          <canvas id="annotate-canvas" class="annotate-canvas"></canvas>
+          <div id="annotate-empty" class="annotate-empty">
+            <strong data-i18n="annotate.emptyTitle">Empty workspace</strong>
+            <span data-i18n="annotate.emptyHint">Upload a screenshot to begin annotating.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tool-card" class="tool-panel">
+      <h2 data-i18n="card.title">Code / Text to Image Card</h2>
+      <p class="panel-subtitle" data-i18n="card.subtitle">Turn code or text into a shareable image card.</p>
+      <div class="card-tool-layout">
+        <div class="card-tool-controls" data-i18n-aria-label="card.controlsAria" aria-label="Text card controls">
+          <label class="label" for="card-text-input" data-i18n="card.inputLabel">Input</label>
+          <textarea id="card-text-input" class="code-input" data-i18n-placeholder="card.placeholder" placeholder="Paste text, code, JSON, or notes here..." spellcheck="false"></textarea>
+
+          <label class="label" for="card-theme" data-i18n="card.themeLabel">Theme</label>
+          <select id="card-theme" class="ts-select">
+            <option value="dark" selected data-i18n="card.themeDark">Dark</option>
+            <option value="light" data-i18n="card.themeLight">Light</option>
+          </select>
+
+          <label class="label" for="card-size" data-i18n="card.sizeLabel">Size</label>
+          <select id="card-size" class="ts-select">
+            <option value="square" selected data-i18n="card.sizeSquare">Square</option>
+            <option value="portrait" data-i18n="card.sizePortrait">Portrait</option>
+            <option value="landscape" data-i18n="card.sizeLandscape">Landscape</option>
+          </select>
+
+          <div class="btn-row">
+            <button class="btn primary" type="button" id="card-export" data-i18n="card.export">Export PNG</button>
+            <button class="btn outline" type="button" id="card-copy-image" data-i18n="card.copyImage">Copy Image</button>
+            <button class="btn red" type="button" id="card-clear" data-i18n="common.clear">Clear</button>
+          </div>
+
+          <div id="card-message" class="tool-message" aria-live="polite"></div>
+        </div>
+
+        <div class="card-preview-shell" data-i18n-aria-label="card.previewAria" aria-label="Text card preview">
+          <div id="card-preview" class="share-card share-card--dark" data-size="square">
+            <div class="share-card-window-bar" aria-hidden="true"><span></span><span></span><span></span></div>
+            <pre id="card-preview-content" class="share-card-content" data-i18n="card.emptyPreview">Start typing to preview your shareable image card.</pre>
           </div>
         </div>
       </div>
@@ -541,11 +714,12 @@
         </div>
       </div>
     </section>
-  </main>
+        </main>
+    </div>
+  </div>
 
   <footer class="footer">
-    <p data-i18n="support.footerNotice">📌 所有处理在浏览器本地完成 · 数据不会上传到服务器 · 纯前端工具</p>
-    <p><span data-i18n="support.footerPrompt">如果你觉得有用，</span><a href="#" onclick="showSupport()" data-i18n="support.footerLink">请我喝杯咖啡 ☕</a></p>
+    <p class="footer-note" data-i18n="support.footerNotice">📌 所有处理在浏览器本地完成 · 数据不会上传到服务器 · 纯前端工具</p>
     <p class="footer-feedback">
       <span data-i18n="support.feedbackLabel">💬 有建议或需求？</span>
       <a href="https://github.com/yyang0611/geek-toolbox/issues/new" target="_blank" data-i18n="support.feedbackGithub">GitHub Issues</a>
