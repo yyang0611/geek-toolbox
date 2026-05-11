@@ -47,10 +47,18 @@ defineExpose({ open })
                     @click="switchTab('intl')">{{ t('support.intlTab') }}</button>
           </div>
 
-          <!-- 国内 tab -->
           <div v-show="activeTab === 'cn'" class="tab-panel">
             <p class="qr-text">{{ t('support.cnQrText') }}</p>
-            <img src="/donate.png" :alt="t('support.qrAlt')" class="donation-qr" />
+            <div class="qr-grid">
+              <div class="qr-card">
+                <p class="qr-label">{{ t('support.wechatLabel') }}</p>
+                <img src="/wechat-pay.png" :alt="t('support.wechatQrAlt')" class="donation-qr" />
+              </div>
+              <div class="qr-card">
+                <p class="qr-label">{{ t('support.alipayLabel') }}</p>
+                <img src="/donate.png" :alt="t('support.alipayQrAlt')" class="donation-qr" />
+              </div>
+            </div>
             <div class="contact-row">
               <p class="hint">{{ t('support.contactLabel') }}<strong>yyang0611</strong> / han998966@gmail.com</p>
               <button class="btn outline small" @click="copyContact">
@@ -59,7 +67,6 @@ defineExpose({ open })
             </div>
           </div>
 
-          <!-- 国际 tab -->
           <div v-show="activeTab === 'intl'" class="tab-panel">
             <p class="hint">{{ t('support.intlHint') }}</p>
             <div class="link-list">
@@ -67,16 +74,6 @@ defineExpose({ open })
                 <a class="link-btn" href="https://www.paypal.com/paypalme/GeekToolbox" target="_blank" rel="noreferrer">PayPal</a>
                 <p class="link-text">https://www.paypal.com/paypalme/GeekToolbox</p>
               </div>
-              <!-- TODO: 待配置实际地址后启用
-              <div class="link-group">
-                <a class="link-btn secondary" href="https://buymeacoffee.com/" target="_blank" rel="noreferrer">Buy Me a Coffee</a>
-                <p class="link-text">https://buymeacoffee.com/</p>
-              </div>
-              <div class="link-group">
-                <a class="link-btn tertiary" href="https://ko-fi.com/" target="_blank" rel="noreferrer">Ko-fi</a>
-                <p class="link-text">https://ko-fi.com/</p>
-              </div>
-              -->
             </div>
             <div class="intl-feedback-row">
               <p class="hint">{{ t('support.intlContactHint') }}</p>
@@ -106,12 +103,13 @@ defineExpose({ open })
   padding: 16px;
   backdrop-filter: blur(4px);
 }
+
 .modal-content {
   background: var(--surface-glass);
   border: 1px solid rgba(108, 99, 255, 0.3);
   border-radius: 16px;
   padding: 28px 24px;
-  max-width: 420px;
+  max-width: 520px;
   width: 100%;
   position: relative;
   max-height: 90vh;
@@ -119,6 +117,7 @@ defineExpose({ open })
   box-shadow: 0 0 40px rgba(108, 99, 255, 0.12), 0 20px 60px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(12px);
 }
+
 .modal-content::before {
   content: '';
   position: absolute;
@@ -129,6 +128,7 @@ defineExpose({ open })
   background: linear-gradient(90deg, transparent, var(--primary), transparent);
   border-radius: 1px;
 }
+
 .close-btn {
   position: absolute;
   top: 12px;
@@ -147,11 +147,13 @@ defineExpose({ open })
   transition: all 0.2s;
   line-height: 1;
 }
+
 .close-btn:hover {
   color: var(--text);
   border-color: var(--primary);
   box-shadow: 0 0 12px rgba(108, 99, 255, 0.2);
 }
+
 .modal-title {
   font-size: 1.1rem;
   margin-bottom: 16px;
@@ -160,43 +162,79 @@ defineExpose({ open })
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
 .support-tabs {
   display: flex;
-  gap: 4px;
-  margin-bottom: 16px;
-  padding: 4px;
-  background: rgba(42, 42, 74, 0.5);
-  border-radius: 8px;
+  margin-bottom: 20px;
+  background: rgba(42, 42, 74, 0.4);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid rgba(108, 99, 255, 0.15);
 }
+
 .support-tab {
-  padding: 6px 16px;
-  border-radius: 6px;
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 8px;
   border: none;
   background: transparent;
   color: var(--text-dim);
   font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .support-tab.active {
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, rgba(108, 99, 255, 0.9), rgba(99, 102, 241, 0.9));
   color: #fff;
-  box-shadow: 0 0 12px rgba(108, 99, 255, 0.3);
+  box-shadow: 0 2px 12px rgba(108, 99, 255, 0.35);
 }
-.tab-panel { text-align: center; }
+
+.support-tab:not(.active):hover {
+  color: var(--text);
+  background: rgba(108, 99, 255, 0.08);
+}
+
+.tab-panel {
+  text-align: center;
+}
+
 .qr-text {
   font-size: 0.85rem;
   color: var(--text-dim);
   margin-bottom: 12px;
 }
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.qr-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.qr-label {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
 .donation-qr {
   width: 180px;
   height: 180px;
   border-radius: 12px;
-  margin-bottom: 14px;
   border: 1px solid rgba(108, 99, 255, 0.2);
   box-shadow: inset 0 0 20px rgba(108, 99, 255, 0.05);
+  object-fit: cover;
 }
+
 .contact-row {
   display: flex;
   align-items: center;
@@ -204,20 +242,19 @@ defineExpose({ open })
   gap: 10px;
   flex-wrap: wrap;
 }
-.contact-row .hint {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-}
+
 .hint {
   font-size: 0.78rem;
   color: var(--text-dim);
 }
+
 .link-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-top: 12px;
 }
+
 .link-btn {
   display: block;
   padding: 10px 16px;
@@ -230,32 +267,75 @@ defineExpose({ open })
   text-decoration: none;
   transition: opacity 0.15s, box-shadow 0.2s;
 }
-.link-btn:hover { opacity: 0.9; box-shadow: var(--glow-primary); text-decoration: none; }
-.link-btn.secondary { background: linear-gradient(135deg, #ff813f, #ff6348); }
-.link-btn.secondary:hover { box-shadow: 0 0 15px rgba(255, 129, 63, 0.3); }
-.link-btn.tertiary { background: linear-gradient(135deg, #13c3ff, #0ea5e9); }
-.link-btn.tertiary:hover { box-shadow: 0 0 15px rgba(19, 195, 255, 0.3); }
-.link-group { margin-bottom: 4px; }
+
+.link-btn:hover {
+  opacity: 0.9;
+  box-shadow: var(--glow-primary);
+  text-decoration: none;
+}
+
+.link-btn.secondary {
+  background: linear-gradient(135deg, #ff813f, #ff6348);
+}
+
+.link-btn.secondary:hover {
+  box-shadow: 0 0 15px rgba(255, 129, 63, 0.3);
+}
+
+.link-group {
+  margin-bottom: 4px;
+}
+
 .link-text {
   font-size: 0.72rem;
   color: var(--text-dim);
   margin-top: 2px;
   word-break: break-all;
 }
+
 .intl-feedback-row {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
 }
-.intl-feedback-row .hint { margin-bottom: 8px; }
 
-.modal-enter-active, .modal-leave-active {
+.intl-feedback-row .hint {
+  margin-bottom: 8px;
+}
+
+.modal-enter-active,
+.modal-leave-active {
   transition: opacity 0.25s ease;
 }
-.modal-enter-active .modal-content, .modal-leave-active .modal-content {
+
+.modal-enter-active .modal-content,
+.modal-leave-active .modal-content {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
 }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-from .modal-content { transform: scale(0.92) translateY(10px); opacity: 0; }
-.modal-leave-to .modal-content { transform: scale(0.95) translateY(-5px); opacity: 0; }
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-content {
+  transform: scale(0.92) translateY(10px);
+  opacity: 0;
+}
+
+.modal-leave-to .modal-content {
+  transform: scale(0.95) translateY(-5px);
+  opacity: 0;
+}
+
+@media (max-width: 520px) {
+  .qr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .donation-qr {
+    width: 200px;
+    height: 200px;
+  }
+}
 </style>

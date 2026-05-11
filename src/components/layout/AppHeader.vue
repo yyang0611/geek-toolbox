@@ -25,9 +25,7 @@ function openSupport() {
         <p class="subtitle">{{ t('header.subtitle') }}</p>
       </div>
       <div class="header-actions">
-        <a class="support-entry-hint"
-           href="https://github.com/yyang0611/geek-toolbox/issues/new"
-           target="_blank">{{ t('support.entryHint') }}</a>
+        <span class="support-entry-hint">{{ t('support.entryHint') }}</span>
         <button class="support-entry-btn" @click="openSupport">{{ t('support.entryCta') }}</button>
         <div class="lang-switcher" :aria-label="t('header.languageSwitcherLabel')">
           <button class="lang-btn" :class="{ active: locale === 'zh-CN' }"
@@ -84,14 +82,11 @@ function openSupport() {
 .support-entry-hint {
   font-size: 0.78rem;
   color: var(--text-dim);
-  transition: color 0.2s, text-shadow 0.2s;
-}
-.support-entry-hint:hover {
-  color: var(--primary);
-  text-decoration: none;
-  text-shadow: 0 0 8px rgba(108, 99, 255, 0.3);
 }
 .support-entry-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 5px 12px;
   border-radius: 6px;
   border: 1px solid var(--primary);
@@ -106,6 +101,7 @@ function openSupport() {
   background: var(--primary);
   color: #fff;
   box-shadow: var(--glow-primary);
+  text-decoration: none;
 }
 .lang-switcher {
   display: flex;

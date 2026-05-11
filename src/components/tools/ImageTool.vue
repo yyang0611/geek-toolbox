@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useClipboard } from '@/composables/useClipboard'
 
@@ -31,6 +31,9 @@ const outputHeight = ref<number | null>(null)
 const processing = ref(false)
 const message = ref('')
 const dragOver = ref(false)
+const dragDepth = ref(0)
+const fileInput = ref<HTMLInputElement | null>(null)
+const previewSection = ref<HTMLElement | null>(null)
 
 // Crop state
 const cropCanvas = ref<HTMLCanvasElement | null>(null)
@@ -42,6 +45,60 @@ const sharedCrop = ref<CropRect | null>(null)
 
 const activeImage = computed(() => images.value.find(img => img.id === activeId.value) || null)
 const hasCompressed = computed(() => images.value.some(img => img.compressedBlob))
+const compressedImages = computed(() => images.value.filter(img => img.compressedBlob && img.compressedUrl))
+const currentPreviewIndex = computed(() => compressedImages.value.findIndex(img => img.compressedUrl === previewUrl.value))
+
+function syncActiveImageState() {
+  const item = activeImage.value
+  currentCrop.value = item?.crop || null
+  previewUrl.value = ''
+  previewMeta.value = ''
+
+  if (!item) {
+    outputWidth.value = null
+    outputHeight.value = null
+    return
+  }
+
+  nextTick(() => {
+    drawCropCanvas()
+    updateDimensionDefaults()
+  })
+}
+
+function setPreviewFromItem(item: ImageItem | null) {
+  if (!item?.compressedUrl || !item.compressedBlob) {
+    previewUrl.value = ''
+    previewMeta.value = ''
+    return
+  }
+
+  previewUrl.value = item.compressedUrl
+  const width = outputWidth.value || item.crop?.w || item.naturalWidth
+  const height = outputHeight.value || item.crop?.h || item.naturalHeight
+  const ratio = Math.round((1 - item.compressedSize / item.originalSize) * 100)
+  previewMeta.value = `${Math.round(width)} × ${Math.round(height)}px · ${formatSize(item.compressedSize)} · -${ratio}%`
+}
+
+function scrollPreviewIntoView() {
+  nextTick(() => {
+    previewSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+function showPreviousPreview() {
+  if (compressedImages.value.length < 2) return
+  const currentIndex = currentPreviewIndex.value
+  const nextIndex = currentIndex <= 0 ? compressedImages.value.length - 1 : currentIndex - 1
+  setPreviewFromItem(compressedImages.value[nextIndex] || null)
+}
+
+function showNextPreview() {
+  if (compressedImages.value.length < 2) return
+  const currentIndex = currentPreviewIndex.value
+  const nextIndex = currentIndex >= compressedImages.value.length - 1 ? 0 : currentIndex + 1
+  setPreviewFromItem(compressedImages.value[nextIndex] || null)
+}
 
 function addFiles(files: FileList | File[]) {
   for (const file of Array.from(files)) {
@@ -58,7 +115,7 @@ function addFiles(files: FileList | File[]) {
     imgEl.onload = () => {
       img.naturalWidth = imgEl.naturalWidth
       img.naturalHeight = imgEl.naturalHeight
-      if (activeId.value === id) updateDimensionDefaults()
+      if (activeId.value === id) syncActiveImageState()
     }
     imgEl.src = thumbnail
     images.value.push(img)
@@ -72,7 +129,31 @@ function handleFileInput(e: Event) {
   input.value = ''
 }
 
+function triggerFileInput() {
+  fileInput.value?.click()
+}
+
+function handleDragOver(e: DragEvent) {
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+  dragOver.value = true
+}
+
+function handleDragEnter(e: DragEvent) {
+  e.preventDefault()
+  dragDepth.value += 1
+  dragOver.value = true
+}
+
+function handleDragLeave(e: DragEvent) {
+  e.preventDefault()
+  dragDepth.value = Math.max(0, dragDepth.value - 1)
+  if (dragDepth.value === 0) dragOver.value = false
+}
+
 function handleDrop(e: DragEvent) {
+  e.preventDefault()
+  dragDepth.value = 0
   dragOver.value = false
   if (e.dataTransfer?.files) addFiles(e.dataTransfer.files)
 }
@@ -92,11 +173,6 @@ function updateDimensionDefaults() {
 
 function selectImage(id: string) {
   activeId.value = id
-  currentCrop.value = images.value.find(img => img.id === id)?.crop || null
-  nextTick(() => {
-    drawCropCanvas()
-    updateDimensionDefaults()
-  })
 }
 
 function removeImage(id: string) {
@@ -300,11 +376,8 @@ async function generatePreview() {
   processing.value = true
   try {
     await compressImage(item)
-    if (item.compressedUrl) {
-      previewUrl.value = item.compressedUrl
-      const ratio = Math.round((1 - item.compressedSize / item.originalSize) * 100)
-      previewMeta.value = `${outputWidth.value || item.naturalWidth} × ${outputHeight.value || item.naturalHeight}px · ${formatSize(item.compressedSize)} · -${ratio}%`
-    }
+    setPreviewFromItem(item)
+    scrollPreviewIntoView()
     message.value = t('image.compressDone')
   } catch (e: any) {
     message.value = e.message || t('image.compressError')
@@ -320,6 +393,8 @@ async function compressAll() {
   message.value = ''
   try {
     for (const item of images.value) await compressImage(item)
+    setPreviewFromItem(activeImage.value || compressedImages.value[0] || null)
+    scrollPreviewIntoView()
     message.value = t('image.compressDone')
   } catch (e: any) {
     message.value = e.message || t('image.compressError')
@@ -417,6 +492,10 @@ function clearAll() {
   message.value = ''
 }
 
+watch(activeId, () => {
+  syncActiveImageState()
+}, { flush: 'post' })
+
 function formatSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
@@ -437,13 +516,14 @@ onUnmounted(() => {
 
     <!-- Drop zone -->
     <section class="section drop-zone" :class="{ 'drag-over': dragOver }"
-             @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="handleDrop">
+             @dragenter="handleDragEnter" @dragover="handleDragOver"
+             @dragleave="handleDragLeave" @drop="handleDrop">
       <div class="drop-content">
         <p class="drop-text">{{ t('image.dropHint') }}</p>
-        <label class="btn primary upload-btn">
+        <button type="button" class="btn primary upload-btn" @click="triggerFileInput">
           {{ t('image.selectButton') }}
-          <input type="file" accept="image/*" multiple hidden @change="handleFileInput" />
-        </label>
+        </button>
+        <input ref="fileInput" type="file" accept="image/*" multiple class="sr-only" @change="handleFileInput" />
       </div>
     </section>
 
@@ -534,13 +614,31 @@ onUnmounted(() => {
     </section>
 
     <!-- Preview -->
-    <section v-if="previewUrl || activeImage" class="section">
+    <section v-if="previewUrl || activeImage" ref="previewSection" class="section">
       <label class="section-label">{{ t('image.preview') }}</label>
+      <div v-if="compressedImages.length > 1" class="preview-toolbar">
+        <button type="button" class="btn outline small" @click="showPreviousPreview">←</button>
+        <span class="preview-counter">{{ currentPreviewIndex + 1 }} / {{ compressedImages.length }}</span>
+        <button type="button" class="btn outline small" @click="showNextPreview">→</button>
+      </div>
       <div class="preview-area">
         <img v-if="previewUrl" :src="previewUrl" class="preview-img" />
         <div v-else class="preview-empty">{{ t('image.previewHint') }}</div>
       </div>
       <p v-if="previewMeta" class="preview-meta">{{ previewMeta }}</p>
+      <div v-if="compressedImages.length > 1" class="batch-preview-grid">
+        <button
+          v-for="img in compressedImages"
+          :key="img.id"
+          type="button"
+          class="batch-preview-item"
+          :class="{ active: previewUrl === img.compressedUrl }"
+          @click="setPreviewFromItem(img)"
+        >
+          <img :src="img.compressedUrl" class="batch-preview-thumb" />
+          <span class="batch-preview-name">{{ img.file.name }}</span>
+        </button>
+      </div>
     </section>
 
     <!-- Results -->
@@ -565,13 +663,15 @@ onUnmounted(() => {
 
 <style scoped>
 .image-tool { font-family: var(--font-sans); }
-.tool-title { font-size: 1.3rem; color: var(--text); margin-bottom: 20px; }
-.section { margin-bottom: 20px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.tool-title { font-size: 1.3rem; color: var(--text); margin-bottom: 20px; background: linear-gradient(135deg, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.section { margin-bottom: 20px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); transition: border-color 0.2s; }
+.section:hover { border-color: rgba(108, 99, 255, 0.2); }
 .section-label { display: block; font-size: 0.82rem; color: var(--text-dim); margin-bottom: 10px; font-weight: 500; }
 .drop-zone { border: 2px dashed var(--border); text-align: center; padding: 32px 16px; transition: border-color 0.2s, background 0.2s; }
 .drop-zone.drag-over { border-color: var(--primary); background: rgba(108, 99, 255, 0.05); }
 .drop-text { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 12px; }
 .upload-btn { display: inline-block; cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .thumb-grid { display: flex; flex-wrap: wrap; gap: 10px; }
 .thumb-item { position: relative; width: 72px; height: 72px; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--border); cursor: pointer; transition: border-color 0.15s; }
 .thumb-item.active { border-color: var(--primary); }
@@ -598,7 +698,9 @@ onUnmounted(() => {
 .btn.outline { background: transparent; color: var(--text); border-color: var(--border); }
 .btn.outline:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
 .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-.btn.primary:hover:not(:disabled) { opacity: 0.85; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); box-shadow: var(--glow-primary); }
+.btn.outline:hover:not(:disabled) { box-shadow: 0 0 12px rgba(108, 99, 255, 0.15); }
+.btn:active { transform: scale(0.97); }
 .message { margin-top: 10px; font-size: 0.82rem; color: var(--primary); }
 .result-list { display: flex; flex-direction: column; gap: 10px; }
 .result-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--surface2); border-radius: var(--radius); }
@@ -611,6 +713,14 @@ onUnmounted(() => {
 .preview-img { width: 100%; height: auto; max-height: 500px; object-fit: contain; display: block; }
 .preview-empty { font-size: 0.82rem; color: var(--text-dim); padding: 32px; text-align: center; }
 .preview-meta { margin-top: 8px; font-size: 0.78rem; font-family: var(--font-mono); color: var(--text-dim); }
+.preview-toolbar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+.preview-counter { font-size: 0.78rem; color: var(--text-dim); font-family: var(--font-mono); }
+.batch-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
+.batch-preview-item { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface2); cursor: pointer; transition: border-color 0.2s, transform 0.2s; }
+.batch-preview-item:hover { border-color: var(--primary); }
+.batch-preview-item.active { border-color: var(--primary); box-shadow: 0 0 12px rgba(108, 99, 255, 0.15); }
+.batch-preview-item:active { transform: scale(0.98); }
+.batch-preview-thumb { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px; }
+.batch-preview-name { font-size: 0.72rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 @media (max-width: 600px) { .settings-grid { grid-template-columns: 1fr; } .action-row { flex-direction: column; } }
 </style>
-
