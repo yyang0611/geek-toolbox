@@ -42,7 +42,12 @@
     "yaml": "YAML ↔ JSON",
     "color": "Color Converter",
     "annotate": "Screenshot Annotation",
-    "card": "Text to Image Card"
+    "card": "Text to Image Card",
+    "uuid": "UUID Generator",
+    "hash": "Hash",
+    "password": "Password",
+    "caseconvert": "Case Convert",
+    "qrcode": "QR Code"
   },
   "home": {
     "discoveryShellAriaLabel": "Tool discovery area",
@@ -166,7 +171,12 @@
     "yaml": "Convert between YAML and JSON formats.",
     "color": "Translate HEX, RGB, and HSL values and generate related color schemes.",
     "annotate": "Add arrows, notes, numbered callouts, and mosaic masking to screenshots, then export the result as PNG.",
-    "card": "Turn code, text, or notes into a shareable image card with PNG export and image copy."
+    "card": "Turn code, text, or notes into a shareable image card with PNG export and image copy.",
+    "uuid": "Generate UUID v4 in batch with uppercase and no-dash options.",
+    "hash": "Compute SHA-1/SHA-256/SHA-512 hash for text or files.",
+    "password": "Generate secure random passwords with configurable length and charset.",
+    "caseconvert": "Convert between camelCase, snake_case, kebab-case, and more.",
+    "qrcode": "Generate QR codes from text or URLs with PNG download."
   },
   "json": {
     "title": "Format / Validate JSON",
@@ -548,5 +558,81 @@
     "feedbackOr": "·",
     "feedbackEmail": "Email me",
     "intlContactHint": "📬 Feedback or collaboration:"
+  },
+  "uuid": {
+    "title": "UUID Generator",
+    "count": "Count",
+    "uppercase": "Uppercase",
+    "noDashes": "No Dashes",
+    "generate": "Generate",
+    "copyAll": "Copy All",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "hash": {
+    "title": "Hash Generator",
+    "modeText": "Text",
+    "modeFile": "File",
+    "algorithm": "Algorithm",
+    "inputPlaceholder": "Enter text to hash...",
+    "dropHint": "Drop a file here, or click to select",
+    "selectFile": "Select File",
+    "fileMeta": "File: {name} · {size}",
+    "uppercase": "Uppercase",
+    "result": "Hash",
+    "copy": "Copy",
+    "copied": "Copied",
+    "computing": "Computing..."
+  },
+  "password": {
+    "title": "Password Generator",
+    "length": "Length",
+    "options": "Character Set",
+    "uppercase": "Uppercase (A-Z)",
+    "lowercase": "Lowercase (a-z)",
+    "numbers": "Numbers (0-9)",
+    "symbols": "Symbols (!{'@'}{'#'}$...)",
+    "excludeAmbiguous": "Exclude ambiguous (0OIl1)",
+    "count": "Count",
+    "generate": "Generate",
+    "copyAll": "Copy All",
+    "copy": "Copy",
+    "copied": "Copied",
+    "strength": "Strength",
+    "strengthWeak": "Weak",
+    "strengthMedium": "Medium",
+    "strengthStrong": "Strong",
+    "strengthVeryStrong": "Very Strong",
+    "noCharset": "⚠️ Select at least one character set"
+  },
+  "caseconvert": {
+    "title": "Case Converter",
+    "inputPlaceholder": "Enter variable names, one per line...",
+    "targetFormat": "Target Format",
+    "formats": {
+      "camel": "camelCase",
+      "pascal": "PascalCase",
+      "snake": "snake_case",
+      "kebab": "kebab-case",
+      "constant": "CONSTANT_CASE"
+    },
+    "result": "Result",
+    "copy": "Copy",
+    "copied": "Copied",
+    "emptyInput": "⚠️ Enter content before converting"
+  },
+  "qrcode": {
+    "title": "QR Code Generator",
+    "inputPlaceholder": "Enter text or URL...",
+    "size": "Size",
+    "errorLevel": "Error Correction",
+    "levels": {
+      "L": "Low (7%)",
+      "M": "Medium (15%)",
+      "Q": "Quartile (25%)",
+      "H": "High (30%)"
+    },
+    "download": "Download PNG",
+    "emptyInput": "⚠️ Enter content to generate a QR code"
   }
 }

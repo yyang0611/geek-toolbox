@@ -42,7 +42,12 @@
     "yaml": "YAML ↔ JSON",
     "color": "颜色转换",
     "annotate": "截图标注",
-    "card": "文字转图卡片"
+    "card": "文字转图卡片",
+    "uuid": "UUID 生成",
+    "hash": "哈希计算",
+    "password": "密码生成",
+    "caseconvert": "命名转换",
+    "qrcode": "QR 码生成"
   },
   "home": {
     "discoveryShellAriaLabel": "工具发现区",
@@ -166,7 +171,12 @@
     "yaml": "在 YAML 与 JSON 之间互相转换。",
     "color": "转换 HEX、RGB、HSL，并生成配色方案。",
     "annotate": "为截图添加箭头、文字、序号与马赛克标注，并导出整理后的 PNG。",
-    "card": "把代码、文本或说明整理成可分享图卡，并支持导出 PNG 与复制图片。"
+    "card": "把代码、文本或说明整理成可分享图卡，并支持导出 PNG 与复制图片。",
+    "uuid": "批量生成 UUID v4，支持大写与去连字符格式。",
+    "hash": "计算文本或文件的 SHA-1/SHA-256/SHA-512 哈希值。",
+    "password": "生成安全随机密码，可配置长度与字符集。",
+    "caseconvert": "在 camelCase、snake_case、kebab-case 等命名格式间互转。",
+    "qrcode": "输入文本或 URL 生成二维码，支持下载 PNG。"
   },
   "json": {
     "title": "JSON 格式化 / 校验",
@@ -548,5 +558,81 @@
     "feedbackOr": "·",
     "feedbackEmail": "邮件联系",
     "intlContactHint": "📬 反馈建议或合作联系："
+  },
+  "uuid": {
+    "title": "UUID 生成器",
+    "count": "数量",
+    "uppercase": "大写",
+    "noDashes": "去连字符",
+    "generate": "生成",
+    "copyAll": "全部复制",
+    "copy": "复制",
+    "copied": "已复制"
+  },
+  "hash": {
+    "title": "哈希计算器",
+    "modeText": "文本",
+    "modeFile": "文件",
+    "algorithm": "算法",
+    "inputPlaceholder": "输入要计算哈希的文本...",
+    "dropHint": "拖拽文件到这里，或点击选择",
+    "selectFile": "选择文件",
+    "fileMeta": "文件：{name} · {size}",
+    "uppercase": "大写",
+    "result": "哈希值",
+    "copy": "复制",
+    "copied": "已复制",
+    "computing": "计算中..."
+  },
+  "password": {
+    "title": "密码生成器",
+    "length": "长度",
+    "options": "字符集",
+    "uppercase": "大写字母 (A-Z)",
+    "lowercase": "小写字母 (a-z)",
+    "numbers": "数字 (0-9)",
+    "symbols": "符号 (!{'@'}{'#'}$...)",
+    "excludeAmbiguous": "排除易混淆字符 (0OIl1)",
+    "count": "数量",
+    "generate": "生成",
+    "copyAll": "全部复制",
+    "copy": "复制",
+    "copied": "已复制",
+    "strength": "强度",
+    "strengthWeak": "弱",
+    "strengthMedium": "中",
+    "strengthStrong": "强",
+    "strengthVeryStrong": "极强",
+    "noCharset": "⚠️ 请至少选择一种字符集"
+  },
+  "caseconvert": {
+    "title": "命名格式转换",
+    "inputPlaceholder": "输入变量名，每行一个...",
+    "targetFormat": "目标格式",
+    "formats": {
+      "camel": "camelCase",
+      "pascal": "PascalCase",
+      "snake": "snake_case",
+      "kebab": "kebab-case",
+      "constant": "CONSTANT_CASE"
+    },
+    "result": "转换结果",
+    "copy": "复制",
+    "copied": "已复制",
+    "emptyInput": "⚠️ 请输入内容后再转换"
+  },
+  "qrcode": {
+    "title": "QR 码生成器",
+    "inputPlaceholder": "输入文本或 URL...",
+    "size": "尺寸",
+    "errorLevel": "纠错级别",
+    "levels": {
+      "L": "低 (7%)",
+      "M": "中 (15%)",
+      "Q": "较高 (25%)",
+      "H": "高 (30%)"
+    },
+    "download": "下载 PNG",
+    "emptyInput": "⚠️ 请输入内容后生成二维码"
   }
 }

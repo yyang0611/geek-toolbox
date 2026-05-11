@@ -122,6 +122,46 @@ export const TOOLS: ToolMeta[] = [
     descKey: 'toolCards.card',
     featured: true,
     component: () => import('@/components/tools/CardTool.vue')
+  },
+  {
+    id: 'uuid',
+    category: 'developer',
+    icon: '\u{1F511}',
+    titleKey: 'tabs.uuid',
+    descKey: 'toolCards.uuid',
+    component: () => import('@/components/tools/UuidTool.vue')
+  },
+  {
+    id: 'hash',
+    category: 'developer',
+    icon: '#️⃣',
+    titleKey: 'tabs.hash',
+    descKey: 'toolCards.hash',
+    component: () => import('@/components/tools/HashTool.vue')
+  },
+  {
+    id: 'password',
+    category: 'developer',
+    icon: '\u{1F510}',
+    titleKey: 'tabs.password',
+    descKey: 'toolCards.password',
+    component: () => import('@/components/tools/PasswordTool.vue')
+  },
+  {
+    id: 'caseconvert',
+    category: 'developer',
+    icon: '\u{1F524}',
+    titleKey: 'tabs.caseconvert',
+    descKey: 'toolCards.caseconvert',
+    component: () => import('@/components/tools/CaseConvertTool.vue')
+  },
+  {
+    id: 'qrcode',
+    category: 'developer',
+    icon: '\u{1F4F1}',
+    titleKey: 'tabs.qrcode',
+    descKey: 'toolCards.qrcode',
+    component: () => import('@/components/tools/QrcodeTool.vue')
   }
 ]
 
