@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useClipboard } from '@/composables/useClipboard'
 
@@ -17,10 +17,17 @@ const uppercase = ref(false)
 const computing = ref(false)
 const fileName = ref('')
 const fileSize = ref('')
+const fileBuffer = ref<ArrayBuffer | null>(null)
 
 async function hashBuffer(data: ArrayBuffer, algo: Algorithm): Promise<string> {
   const buffer = await crypto.subtle.digest(algo, data)
   return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+function formatSize(size: number): string {
+  if (size < 1024) return `${size} B`
+  if (size < 1048576) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1048576).toFixed(1)} MB`
 }
 
 async function computeFromText() {
@@ -33,17 +40,22 @@ async function computeFromText() {
   } finally { computing.value = false }
 }
 
+async function computeFromFile() {
+  if (!fileBuffer.value) return
+  computing.value = true
+  try {
+    result.value = await hashBuffer(fileBuffer.value, algorithm.value)
+    if (uppercase.value) result.value = result.value.toUpperCase()
+  } finally { computing.value = false }
+}
+
 async function handleFile(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   fileName.value = file.name
-  fileSize.value = file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size/1024).toFixed(1)} KB` : `${(file.size/1048576).toFixed(1)} MB`
-  computing.value = true
-  try {
-    const buffer = await file.arrayBuffer()
-    result.value = await hashBuffer(buffer, algorithm.value)
-    if (uppercase.value) result.value = result.value.toUpperCase()
-  } finally { computing.value = false }
+  fileSize.value = formatSize(file.size)
+  fileBuffer.value = await file.arrayBuffer()
+  computeFromFile()
 }
 
 function handleDrop(e: DragEvent) {
@@ -51,17 +63,16 @@ function handleDrop(e: DragEvent) {
   const file = e.dataTransfer?.files[0]
   if (!file) return
   fileName.value = file.name
-  fileSize.value = file.size < 1024 ? `${file.size} B` : file.size < 1048576 ? `${(file.size/1024).toFixed(1)} KB` : `${(file.size/1048576).toFixed(1)} MB`
-  computing.value = true
+  fileSize.value = formatSize(file.size)
   file.arrayBuffer().then(buffer => {
-    return hashBuffer(buffer, algorithm.value)
-  }).then(hash => {
-    result.value = uppercase.value ? hash.toUpperCase() : hash
-  }).finally(() => { computing.value = false })
+    fileBuffer.value = buffer
+    computeFromFile()
+  })
 }
 
 watch([algorithm, uppercase], () => {
   if (mode.value === 'text' && input.value) computeFromText()
+  else if (mode.value === 'file' && fileBuffer.value) computeFromFile()
 })
 
 watch(input, () => { if (mode.value === 'text') computeFromText() })
@@ -74,8 +85,8 @@ function copyResult() { if (result.value) copy(result.value) }
     <h2 class="tool-title">{{ t('hash.title') }}</h2>
     <div class="options-row">
       <div class="mode-switch">
-        <button :class="['btn btn-sm', mode === 'text' && 'btn-primary']" @click="mode = 'text'; result = ''">{{ t('hash.modeText') }}</button>
-        <button :class="['btn btn-sm', mode === 'file' && 'btn-primary']" @click="mode = 'file'; result = ''">{{ t('hash.modeFile') }}</button>
+        <button :class="['btn btn-sm', mode === 'text' && 'btn-primary']" @click="mode = 'text'; result = ''; fileName = ''; fileBuffer = null">{{ t('hash.modeText') }}</button>
+        <button :class="['btn btn-sm', mode === 'file' && 'btn-primary']" @click="mode = 'file'; result = ''; input = ''">{{ t('hash.modeFile') }}</button>
       </div>
       <label class="option-item">
         {{ t('hash.algorithm') }}
@@ -91,9 +102,10 @@ function copyResult() { if (result.value) copy(result.value) }
       </label>
     </div>
     <textarea v-if="mode === 'text'" v-model="input" class="tool-input" :placeholder="t('hash.inputPlaceholder')" rows="5"></textarea>
-    <div v-else class="drop-zone" @drop="handleDrop" @dragover.prevent>
-      <p>{{ t('hash.dropHint') }}</p>
-      <input type="file" @change="handleFile" class="file-input" />
+    <div v-else class="drop-zone" @drop="handleDrop" @dragover.prevent @click="($refs.fileInput as HTMLInputElement)?.click()">
+      <p class="drop-text">{{ t('hash.dropHint') }}</p>
+      <button class="btn btn-sm" @click.stop="($refs.fileInput as HTMLInputElement)?.click()">{{ t('hash.selectFile') }}</button>
+      <input ref="fileInput" type="file" @change="handleFile" class="file-input-hidden" />
       <p v-if="fileName" class="file-meta">{{ t('hash.fileMeta', { name: fileName, size: fileSize }) }}</p>
     </div>
     <div v-if="computing" class="computing">{{ t('hash.computing') }}</div>
@@ -128,11 +140,12 @@ function copyResult() { if (result.value) copy(result.value) }
 .tool-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(108,99,255,0.12); }
 .drop-zone {
   padding: 40px 20px; border: 2px dashed var(--border); border-radius: var(--radius);
-  text-align: center; color: var(--text-dim); transition: border-color 0.2s; position: relative;
+  text-align: center; color: var(--text-dim); transition: border-color 0.2s; cursor: pointer;
 }
 .drop-zone:hover { border-color: var(--primary); }
-.file-input { margin-top: 10px; }
-.file-meta { margin-top: 8px; font-size: 0.82rem; color: var(--text); }
+.drop-text { margin-bottom: 12px; }
+.file-input-hidden { display: none; }
+.file-meta { margin-top: 12px; font-size: 0.82rem; color: var(--text); }
 .computing { margin-top: 12px; color: var(--text-dim); font-size: 0.82rem; }
 .result-box { margin-top: 14px; }
 .result-label { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 6px; display: block; }

@@ -10,19 +10,31 @@ const size = ref(256)
 const errorLevel = ref<'L' | 'M' | 'Q' | 'H'>('M')
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const hasContent = ref(false)
+const errorMsg = ref('')
 
 async function generate() {
   if (!input.value.trim() || !canvasRef.value) {
     hasContent.value = false
+    if (canvasRef.value) {
+      const ctx = canvasRef.value.getContext('2d')
+      if (ctx) { ctx.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height); canvasRef.value.width = 0; canvasRef.value.height = 0 }
+    }
+    errorMsg.value = ''
     return
   }
-  await QRCode.toCanvas(canvasRef.value, input.value, {
-    width: size.value,
-    errorCorrectionLevel: errorLevel.value,
-    margin: 2,
-    color: { dark: '#e0e0f0', light: '#1a1a2e' }
-  })
-  hasContent.value = true
+  try {
+    await QRCode.toCanvas(canvasRef.value, input.value, {
+      width: size.value,
+      errorCorrectionLevel: errorLevel.value,
+      margin: 2,
+      color: { dark: '#e0e0f0', light: '#1a1a2e' }
+    })
+    hasContent.value = true
+    errorMsg.value = ''
+  } catch {
+    hasContent.value = false
+    errorMsg.value = t('qrcode.tooLong')
+  }
 }
 
 watch([input, size, errorLevel], () => { nextTick(generate) })
@@ -58,7 +70,8 @@ function download() {
     </div>
     <div class="canvas-wrap">
       <canvas ref="canvasRef"></canvas>
-      <p v-if="!hasContent" class="empty-hint">{{ t('qrcode.emptyInput') }}</p>
+      <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+      <p v-else-if="!hasContent" class="empty-hint">{{ t('qrcode.emptyInput') }}</p>
     </div>
     <button v-if="hasContent" class="btn btn-primary" @click="download">{{ t('qrcode.download') }}</button>
   </div>
@@ -91,6 +104,7 @@ function download() {
   background: var(--surface2); margin-bottom: 14px; min-height: 180px;
 }
 .empty-hint { color: var(--text-dim); font-size: 0.82rem; }
+.error-msg { color: var(--red); font-size: 0.82rem; }
 .btn { padding: 8px 18px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
 .btn:hover { border-color: var(--primary); color: var(--primary); }
 .btn-primary { background: var(--gradient-primary); color: #fff; border-color: var(--primary); }

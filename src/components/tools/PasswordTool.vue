@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useClipboard } from '@/composables/useClipboard'
 
@@ -43,12 +43,16 @@ const strength = computed(() => {
 
 function generate() {
   if (!charset.value) return
-  const arr = new Uint32Array(length.value * count.value)
+  const len = Math.max(8, Math.min(128, length.value || 16))
+  const cnt = Math.max(1, Math.min(20, count.value || 1))
+  length.value = len
+  count.value = cnt
+  const arr = new Uint32Array(len * cnt)
   crypto.getRandomValues(arr)
-  results.value = Array.from({ length: count.value }, (_, i) => {
+  results.value = Array.from({ length: cnt }, (_, i) => {
     let pw = ''
-    for (let j = 0; j < length.value; j++) {
-      pw += charset.value[arr[i * length.value + j] % charset.value.length]
+    for (let j = 0; j < len; j++) {
+      pw += charset.value[arr[i * len + j] % charset.value.length]
     }
     return pw
   })
@@ -61,6 +65,8 @@ function copyOne(text: string, index: number) {
 }
 
 function copyAll() { copy(results.value.join('\n')) }
+
+watch([useUppercase, useLowercase, useNumbers, useSymbols, excludeAmbiguous, length], generate)
 
 generate()
 </script>

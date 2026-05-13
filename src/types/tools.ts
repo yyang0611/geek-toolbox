@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 
-export type ToolCategory = 'developer' | 'text' | 'image' | 'file'
+export type ToolCategory = 'developer' | 'text' | 'image' | 'file' | 'life'
 
 export interface ToolMeta {
   id: string

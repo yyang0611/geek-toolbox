@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useClipboard } from '@/composables/useClipboard'
 
@@ -13,7 +13,9 @@ const results = ref<string[]>([])
 const copiedIndex = ref(-1)
 
 function generate() {
-  results.value = Array.from({ length: count.value }, () => {
+  const n = Math.max(1, Math.min(100, count.value || 1))
+  count.value = n
+  results.value = Array.from({ length: n }, () => {
     let uuid: string = crypto.randomUUID()
     if (noDashes.value) uuid = uuid.replace(/-/g, '')
     if (uppercase.value) uuid = uuid.toUpperCase()
@@ -30,6 +32,8 @@ function copyOne(text: string, index: number) {
 function copyAll() {
   copy(results.value.join('\n'))
 }
+
+watch([uppercase, noDashes], generate)
 
 generate()
 </script>

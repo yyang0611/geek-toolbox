@@ -5,7 +5,8 @@ export const CATEGORIES: CategoryMeta[] = [
   { id: 'developer', titleKey: 'categories.developer' },
   { id: 'text', titleKey: 'categories.text' },
   { id: 'image', titleKey: 'categories.image' },
-  { id: 'file', titleKey: 'categories.file' }
+  { id: 'file', titleKey: 'categories.file' },
+  { id: 'life', titleKey: 'categories.life' }
 ]
 
 export const TOOLS: ToolMeta[] = [
@@ -162,6 +163,46 @@ export const TOOLS: ToolMeta[] = [
     titleKey: 'tabs.qrcode',
     descKey: 'toolCards.qrcode',
     component: () => import('@/components/tools/QrcodeTool.vue')
+  },
+  {
+    id: 'unit',
+    category: 'life',
+    icon: '\u{1F4D0}',
+    titleKey: 'tabs.unit',
+    descKey: 'toolCards.unit',
+    component: () => import('@/components/tools/UnitTool.vue')
+  },
+  {
+    id: 'datecalc',
+    category: 'life',
+    icon: '\u{1F4C5}',
+    titleKey: 'tabs.datecalc',
+    descKey: 'toolCards.datecalc',
+    component: () => import('@/components/tools/DateCalcTool.vue')
+  },
+  {
+    id: 'mortgage',
+    category: 'life',
+    icon: '\u{1F3E0}',
+    titleKey: 'tabs.mortgage',
+    descKey: 'toolCards.mortgage',
+    component: () => import('@/components/tools/MortgageTool.vue')
+  },
+  {
+    id: 'random',
+    category: 'life',
+    icon: '\u{1F3B2}',
+    titleKey: 'tabs.random',
+    descKey: 'toolCards.random',
+    component: () => import('@/components/tools/RandomTool.vue')
+  },
+  {
+    id: 'pomodoro',
+    category: 'life',
+    icon: '\u{1F345}',
+    titleKey: 'tabs.pomodoro',
+    descKey: 'toolCards.pomodoro',
+    component: () => import('@/components/tools/PomodoroTool.vue')
   }
 ]
 
